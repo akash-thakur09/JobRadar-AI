@@ -34,6 +34,16 @@ class EligibilityStatusEnum(enum.StrEnum):
     INELIGIBLE_MANDATORY_SKILL = "INELIGIBLE_MANDATORY_SKILL"
 
 
+class SemanticAnalysisStatusEnum(enum.StrEnum):
+    """Lifecycle states for Layer 3 LLM Semantic Analysis."""
+
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    SKIPPED = "SKIPPED"
+
+
 class JobMatch(Base, TimestampMixin):
     """Persisted candidate-job matching result with line-item score breakdown."""
 
@@ -63,6 +73,16 @@ class JobMatch(Base, TimestampMixin):
             name="eligibility_status_enum",
             create_type=False,
         ),
+        nullable=False,
+    )
+    semantic_analysis_status: Mapped[SemanticAnalysisStatusEnum] = mapped_column(
+        Enum(
+            SemanticAnalysisStatusEnum,
+            name="semantic_analysis_status_enum",
+            create_type=False,
+        ),
+        default=SemanticAnalysisStatusEnum.PENDING,
+        server_default=func.text("'PENDING'"),
         nullable=False,
     )
     deterministic_score: Mapped[Decimal] = mapped_column(
@@ -130,6 +150,9 @@ class JobMatch(Base, TimestampMixin):
         UniqueConstraint("job_id", "candidate_profile_id", name="uq_job_matches_candidate_job"),
         Index("idx_job_matches_score", "candidate_profile_id", final_score.desc()),
         Index("idx_job_matches_eligibility", "candidate_profile_id", "eligibility_status"),
+        Index(
+            "idx_job_matches_semantic_status", "candidate_profile_id", "semantic_analysis_status"
+        ),
     )
 
     @property
