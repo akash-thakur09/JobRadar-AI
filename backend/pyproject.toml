@@ -97,6 +97,7 @@ module = [
     "app.modules.resumes.tasks",
     "app.modules.discovery.tasks",
     "app.modules.jobs.tasks",
+    "app.modules.matching.tasks",
 ]
 disallow_untyped_decorators = false
 disallow_untyped_calls = false

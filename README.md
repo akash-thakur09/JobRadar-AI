@@ -331,7 +331,60 @@ curl -X POST "http://localhost:8000/api/v1/jobs/process-pending?batch_size=100"
 
 ---
 
-## Background Processing & Discovery Architecture
+## Candidate Eligibility & Deterministic Job Matching API Usage
+
+The Matching module provides candidate-specific, deterministic intelligence (Layer 1 boolean eligibility gates and Layer 2 weighted relevance scoring) without LLM latency or cost.
+
+### Matching Engine Architecture
+
+```text
+Candidate Profile + Preferences + Skills + Experience + Canonical Job
+                               ↓
+                 Layer 1 — Deterministic Eligibility
+        (Freshness, Workplace, Location, Experience + 12mo Buffer,
+                Work Authorization, Mandatory Skills)
+                               ↓
+                       Passes Hard Gates?
+                      /                 \
+                    NO                  YES
+                   /                     \
+       Status: ELIGIBILITY_FAILED         Layer 2 — Deterministic Scoring
+       Deterministic Score: 0.00          - Skill Coverage: 40 pts
+       (Qualification halts)              - Experience Alignment: 20 pts
+                                          - Role Title Relevance: 15 pts
+                                          - Workplace / Location Match: 15 pts
+                                          - Bonus Factors: 10 pts
+                                                   ↓
+                                        Relevance Score (0 - 100)
+                                        ├── Score >= 50.00: is_qualified = True
+                                        └── Score < 50.00: is_qualified = False
+                                        (Canonical Job.status remains candidate-independent)
+```
+
+### 1. List Evaluated Job Matches
+Query matches for a candidate sorted by relevance score descending with optional score and eligibility filters:
+
+```bash
+curl -s "http://localhost:8000/api/v1/matches?min_score=70.0&eligibility=ELIGIBLE&page=1&page_size=20"
+```
+
+### 2. Get Match Details & Line-Item Mathematical Breakdown
+Inspect the complete mathematical audit trail, including Layer 1 boolean checks and Layer 2 component point breakdowns:
+
+```bash
+curl -s "http://localhost:8000/api/v1/matches/<MATCH_UUID>"
+```
+
+### 3. Re-evaluate Match for a Job
+Re-run Layer 1 eligibility and Layer 2 scoring on-demand against updated candidate skills or preferences:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/matches/<JOB_UUID>/re-evaluate"
+```
+
+---
+
+## Background Processing & Task Architecture
 
 - **Source Adapter Contract:** Abstract `JobSourceAdapter` interface (`GreenhouseAdapter`, `LeverAdapter`, `CareerPageAdapter`) with decoupled HTTP client lifecycle.
 - **Idempotent Ingestion:** Compound unique constraint `(job_source_id, external_job_id)` on `job_source_records` prevents redundant row creation. Repeat discoveries update `last_seen_at`; material payload changes compute a new SHA-256 hash and mark records for downstream re-normalization.

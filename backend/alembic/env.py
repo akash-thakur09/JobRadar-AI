@@ -7,9 +7,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import app.modules.candidate.models  # noqa: F401  # noqa: F401
-import app.modules.discovery.models  # noqa: F401  # noqa: F401
-import app.modules.jobs.models  # noqa: F401  # noqa: F401
+import app.modules.candidate.models  # noqa: F401
+import app.modules.discovery.models  # noqa: F401
+import app.modules.jobs.models  # noqa: F401
+import app.modules.matching.models  # noqa: F401
 from alembic import context
 from app.core.config import get_settings
 from app.database.base import Base

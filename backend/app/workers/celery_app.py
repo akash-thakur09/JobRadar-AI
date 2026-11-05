@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.modules.resumes.tasks",
         "app.modules.discovery.tasks",
         "app.modules.jobs.tasks",
+        "app.modules.matching.tasks",
     ],
 )
 
