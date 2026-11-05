@@ -109,6 +109,10 @@ class Settings(BaseSettings):
         default=0.1,
         description="LLM sampling temperature",
     )
+    tailoring_max_regeneration_attempts: int = Field(
+        default=2,
+        description="Maximum regeneration attempts on claim validation failure",
+    )
 
     # Future Integrations (Placeholders)
     storage_dir: str = Field(

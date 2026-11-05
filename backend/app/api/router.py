@@ -8,6 +8,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.jobs import jobs_router
 from app.api.routes.matches import matches_router
 from app.api.routes.resumes import router as resumes_router
+from app.api.routes.tailored_resumes import router as tailored_resumes_router
 
 api_v1_router = APIRouter()
 
@@ -28,3 +29,6 @@ api_v1_router.include_router(jobs_router)
 
 # Register candidate matching and scoring routes
 api_v1_router.include_router(matches_router)
+
+# Register truthful resume tailoring routes
+api_v1_router.include_router(tailored_resumes_router)

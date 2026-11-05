@@ -121,5 +121,52 @@ class MockLLMProvider:
             )
             return default_semantic  # type: ignore[return-value]
 
+        if response_schema.__name__ == "TailoredResumeContent":
+            from app.modules.tailoring.schemas import (
+                TailoredEducationItem,
+                TailoredExperienceItem,
+                TailoredProjectItem,
+                TailoredResumeContent,
+            )
+
+            default_tailored = TailoredResumeContent(
+                headline="Senior Backend Engineer",
+                professional_summary=(
+                    "Results-oriented backend software engineer with demonstrated expertise in "
+                    "Python, asynchronous microservices, and high-performance databases."
+                ),
+                skills=["Python", "FastAPI", "PostgreSQL", "Docker", "Redis"],
+                experience=[
+                    TailoredExperienceItem(
+                        company="Acme Corp",
+                        title="Senior Software Engineer",
+                        location="Remote",
+                        start_date="2021",
+                        end_date="Present",
+                        bullet_points=[
+                            "Architected high-throughput async data ingestion services using FastAPI.",
+                            "Optimized database indexing and queries, supporting critical production workloads.",
+                        ],
+                    )
+                ],
+                projects=[
+                    TailoredProjectItem(
+                        name="Cloud Task Orchestrator",
+                        description="Distributed worker task pipeline with Redis queues.",
+                        technologies=["Python", "Redis", "Docker"],
+                    )
+                ],
+                education=[
+                    TailoredEducationItem(
+                        institution="State University",
+                        degree="Bachelor of Science",
+                        field_of_study="Computer Science",
+                        graduation_date="2020",
+                    )
+                ],
+                tailoring_notes="Emphasized async backend expertise matching target role description.",
+            )
+            return default_tailored  # type: ignore[return-value]
+
         # Generic dummy model instantiation
         return response_schema.model_validate({})
