@@ -1,0 +1,54 @@
+{
+  "jobs": [
+    {
+      "id": 4123456,
+      "title": "Senior Distributed Systems Engineer",
+      "updated_at": "2026-11-01T14:30:00Z",
+      "requisition_id": "DIST-809",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/4123456",
+      "location": {
+        "name": "San Francisco, CA / Remote"
+      },
+      "metadata": [
+        {
+          "id": 1,
+          "name": "Employment Type",
+          "value": "Full-Time"
+        }
+      ],
+      "departments": [
+        {
+          "id": 101,
+          "name": "Platform Engineering"
+        }
+      ],
+      "offices": [
+        {
+          "id": 201,
+          "name": "San Francisco HQ"
+        }
+      ],
+      "content": "&lt;p&gt;We are seeking a Senior Distributed Systems Engineer to scale our core event pipelines.&lt;/p&gt;&lt;p&gt;Requirements:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years building backend systems in Python, Go, or Rust.&lt;/li&gt;&lt;li&gt;Strong experience with PostgreSQL and distributed queues.&lt;/li&gt;&lt;/ul&gt;"
+    },
+    {
+      "id": 4123457,
+      "title": "Staff AI / ML Platform Engineer",
+      "updated_at": "2026-11-02T09:15:00Z",
+      "requisition_id": "AIML-102",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/4123457",
+      "location": {
+        "name": "Remote, US"
+      },
+      "metadata": [],
+      "departments": [
+        {
+          "id": 102,
+          "name": "Artificial Intelligence"
+        }
+      ],
+      "offices": [],
+      "content": "&lt;p&gt;Join our AI team to build high-throughput LLM inference architectures.&lt;/p&gt;"
+    }
+  ]
+}
+

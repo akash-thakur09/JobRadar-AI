@@ -1,0 +1,45 @@
+[
+  {
+    "id": "e4b5f8c2-3e2a-4b91-9c8a-1234567890ab",
+    "text": "Principal Backend Architect",
+    "createdAt": 1730467200000,
+    "updatedAt": 1730553600000,
+    "hostedUrl": "https://jobs.lever.co/acme-corp/e4b5f8c2-3e2a-4b91-9c8a-1234567890ab",
+    "applyUrl": "https://jobs.lever.co/acme-corp/e4b5f8c2-3e2a-4b91-9c8a-1234567890ab/apply",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "Remote - US",
+      "team": "Architecture"
+    },
+    "description": "<p>We are seeking a Principal Backend Architect to define our modular monolith &amp; event services.</p>",
+    "descriptionPlain": "We are seeking a Principal Backend Architect to define our modular monolith & event services.",
+    "lists": [
+      {
+        "text": "Core Qualifications",
+        "content": "<ul><li>8+ years designing high-concurrency systems</li><li>Deep knowledge of async Python & PostgreSQL</li></ul>"
+      }
+    ],
+    "additional": "Competitive equity package, 401(k) matching, and home office stipend.",
+    "workplaceType": "remote"
+  },
+  {
+    "id": "f8a1c9e4-1b2c-3d4e-5f6a-7b8c9d0e1f2a",
+    "text": "Senior DevOps / SRE Specialist",
+    "createdAt": 1730640000000,
+    "updatedAt": 1730640000000,
+    "hostedUrl": "https://jobs.lever.co/acme-corp/f8a1c9e4-1b2c-3d4e-5f6a-7b8c9d0e1f2a",
+    "applyUrl": "https://jobs.lever.co/acme-corp/f8a1c9e4-1b2c-3d4e-5f6a-7b8c9d0e1f2a/apply",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Infrastructure",
+      "location": "New York, NY",
+      "team": "SRE"
+    },
+    "description": "<p>Maintain 99.99% availability across Kubernetes clusters and Redis infrastructure.</p>",
+    "descriptionPlain": "Maintain 99.99% availability across Kubernetes clusters and Redis infrastructure.",
+    "lists": [],
+    "workplaceType": "hybrid"
+  }
+]
+
