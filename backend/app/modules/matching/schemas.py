@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.candidate.models import WorkplaceTypeEnum
 from app.modules.jobs.schemas import JobSummaryResponse
-from app.modules.matching.models import EligibilityStatusEnum
+from app.modules.matching.models import EligibilityStatusEnum, SemanticAnalysisStatusEnum
 
 
 class JobMatchSummaryResponse(BaseModel):
@@ -21,6 +21,7 @@ class JobMatchSummaryResponse(BaseModel):
     job_id: uuid.UUID
     candidate_profile_id: uuid.UUID
     eligibility_status: EligibilityStatusEnum
+    semantic_analysis_status: SemanticAnalysisStatusEnum = SemanticAnalysisStatusEnum.PENDING
     deterministic_score: Decimal
     semantic_score: Decimal | None = None
     final_score: Decimal

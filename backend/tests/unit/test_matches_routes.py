@@ -13,10 +13,14 @@ from app.database.session import get_db_session
 from app.main import create_app
 from app.modules.candidate.models import WorkplaceTypeEnum
 from app.modules.jobs.schemas import PaginatedResponse, PaginationMetadata
-from app.modules.matching.models import EligibilityStatusEnum
+from app.modules.matching.models import EligibilityStatusEnum, SemanticAnalysisStatusEnum
 from app.modules.matching.schemas import (
     JobMatchDetailResponse,
     JobMatchSummaryResponse,
+)
+from app.modules.matching.semantic_service import (
+    SemanticAnalysisService,
+    get_semantic_service,
 )
 from app.modules.matching.service import MatchingService, get_matching_service
 
@@ -27,9 +31,15 @@ def mock_matching_service() -> AsyncMock:
 
 
 @pytest.fixture
-def test_app(mock_matching_service: AsyncMock):
+def mock_semantic_service() -> AsyncMock:
+    return AsyncMock(spec=SemanticAnalysisService)
+
+
+@pytest.fixture
+def test_app(mock_matching_service: AsyncMock, mock_semantic_service: AsyncMock):
     app = create_app()
     app.dependency_overrides[get_matching_service] = lambda: mock_matching_service
+    app.dependency_overrides[get_semantic_service] = lambda: mock_semantic_service
     app.dependency_overrides[get_db_session] = lambda: AsyncMock()
     return app
 
@@ -190,3 +200,80 @@ async def test_reevaluate_job_match(test_app, mock_matching_service: AsyncMock) 
     assert data["match"]["id"] == str(match_id)
     assert data["match"]["deterministic_score"] == "75.00"
     assert "Successfully evaluated" in data["message"]
+
+
+@pytest.mark.asyncio
+async def test_trigger_semantic_analysis_success(
+    test_app, mock_matching_service: AsyncMock, mock_semantic_service: AsyncMock
+) -> None:
+    now = datetime.now(UTC)
+    match_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    cand_id = uuid.uuid4()
+
+    mock_match = AsyncMock()
+    mock_match.id = match_id
+    mock_semantic_service.evaluate_semantic_match.return_value = mock_match
+
+    detail = JobMatchDetailResponse(
+        id=match_id,
+        job_id=job_id,
+        candidate_profile_id=cand_id,
+        eligibility_status=EligibilityStatusEnum.ELIGIBLE,
+        semantic_analysis_status=SemanticAnalysisStatusEnum.COMPLETED,
+        deterministic_score=Decimal("80.00"),
+        semantic_score=Decimal("90.00"),
+        final_score=Decimal("84.00"),
+        skill_score=Decimal("35.00"),
+        experience_score=Decimal("20.00"),
+        title_score=Decimal("15.00"),
+        preference_score=Decimal("10.00"),
+        match_explanation="Evaluated with strong semantic alignment.",
+        match_explanation_details={"semantic_evaluation": {"score": 90.0}},
+        created_at=now,
+        updated_at=now,
+        job_title="Software Architect",
+        company_name="Google",
+        workplace_type=WorkplaceTypeEnum.REMOTE,
+        normalized_location="Sunnyvale, CA",
+        job=None,
+    )
+    mock_matching_service.get_match.return_value = detail
+
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as ac:
+        response = await ac.post(f"/api/v1/matches/{match_id}/semantic-analysis")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(match_id)
+    assert data["semantic_analysis_status"] == "COMPLETED"
+    assert data["semantic_score"] == "90.00"
+    assert data["final_score"] == "84.00"
+
+
+@pytest.mark.asyncio
+async def test_trigger_semantic_analysis_not_found(
+    test_app, mock_semantic_service: AsyncMock
+) -> None:
+    missing_id = uuid.uuid4()
+    mock_semantic_service.evaluate_semantic_match.side_effect = EntityNotFoundError(
+        "JobMatch", missing_id
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as ac:
+        response = await ac.post(f"/api/v1/matches/{missing_id}/semantic-analysis")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert "Not Found" in data["title"]
+    assert str(missing_id) in data["detail"]
+
+
+@pytest.mark.asyncio
+async def test_trigger_semantic_analysis_invalid_uuid(test_app) -> None:
+    async with AsyncClient(transport=ASGITransport(app=test_app), base_url="http://test") as ac:
+        response = await ac.post("/api/v1/matches/not-a-valid-uuid/semantic-analysis")
+
+    assert response.status_code == 422
+    data = response.json()
+    assert "validation" in data["title"].lower() or "error" in data["title"].lower()

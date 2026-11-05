@@ -14,6 +14,10 @@ from app.modules.matching.schemas import (
     JobMatchReevaluateResponse,
     JobMatchSummaryResponse,
 )
+from app.modules.matching.semantic_service import (
+    SemanticAnalysisService,
+    get_semantic_service,
+)
 from app.modules.matching.service import MatchingService, get_matching_service
 
 matches_router = APIRouter(prefix="/matches", tags=["Matching & Insights"])
@@ -102,3 +106,21 @@ async def reevaluate_job_match(
         match=detail,
         message="Successfully evaluated candidate-job match.",
     )
+
+
+@matches_router.post(
+    "/{match_id}/semantic-analysis",
+    response_model=JobMatchDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Trigger Layer 3 LLM Semantic Analysis",
+    description="Evaluate contextual alignment and transferable skills via LLM for a qualified match.",
+)
+async def trigger_semantic_analysis(
+    match_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    matching_service: MatchingService = Depends(get_matching_service),
+    semantic_service: SemanticAnalysisService = Depends(get_semantic_service),
+) -> JobMatchDetailResponse:
+    await semantic_service.evaluate_semantic_match(session=session, match_id=match_id)
+    await session.commit()
+    return await matching_service.get_match(session=session, match_id=match_id)

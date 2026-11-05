@@ -84,7 +84,11 @@ class Settings(BaseSettings):
         description="Celery task result backend URL",
     )
 
-    # Future Integrations (Placeholders)
+    # LLM & Semantic Analysis
+    llm_provider: str = Field(
+        default="ollama",
+        description="LLM provider implementation ('ollama', 'mock')",
+    )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
         description="Local Ollama instance base URL",
@@ -93,6 +97,20 @@ class Settings(BaseSettings):
         default="llama3.1:8b",
         description="Default local LLM model name",
     )
+    llm_timeout_seconds: float = Field(
+        default=30.0,
+        description="Timeout for LLM generation in seconds",
+    )
+    llm_max_retries: int = Field(
+        default=2,
+        description="Maximum retries for LLM requests",
+    )
+    llm_temperature: float = Field(
+        default=0.1,
+        description="LLM sampling temperature",
+    )
+
+    # Future Integrations (Placeholders)
     storage_dir: str = Field(
         default="storage",
         description="Root directory for local file storage",

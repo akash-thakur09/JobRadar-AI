@@ -20,7 +20,11 @@ from app.modules.candidate.repository import CandidateRepository
 from app.modules.jobs.repository import JobRepository
 from app.modules.jobs.schemas import JobSummaryResponse, PaginatedResponse, PaginationMetadata
 from app.modules.matching.eligibility import evaluate_eligibility
-from app.modules.matching.models import EligibilityStatusEnum, JobMatch
+from app.modules.matching.models import (
+    EligibilityStatusEnum,
+    JobMatch,
+    SemanticAnalysisStatusEnum,
+)
 from app.modules.matching.repository import MatchingRepository
 from app.modules.matching.schemas import (
     JobMatchDetailResponse,
@@ -242,6 +246,8 @@ class MatchingService:
             job_id=match.job_id,
             candidate_profile_id=match.candidate_profile_id,
             eligibility_status=match.eligibility_status,
+            semantic_analysis_status=match.semantic_analysis_status
+            or SemanticAnalysisStatusEnum.PENDING,
             deterministic_score=match.deterministic_score,
             semantic_score=match.semantic_score,
             final_score=match.final_score,
@@ -292,6 +298,8 @@ class MatchingService:
                     job_id=m.job_id,
                     candidate_profile_id=m.candidate_profile_id,
                     eligibility_status=m.eligibility_status,
+                    semantic_analysis_status=m.semantic_analysis_status
+                    or SemanticAnalysisStatusEnum.PENDING,
                     deterministic_score=m.deterministic_score,
                     semantic_score=m.semantic_score,
                     final_score=m.final_score,

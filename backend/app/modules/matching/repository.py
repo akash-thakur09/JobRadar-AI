@@ -9,8 +9,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.modules.candidate.models import CandidateProfile
 from app.modules.jobs.models import Job, JobStatusEnum
 from app.modules.matching.models import EligibilityStatusEnum, JobMatch
+from app.modules.resumes.models import MasterResume
 
 
 class MatchingRepository:
@@ -23,6 +25,37 @@ class MatchingRepository:
         stmt = select(JobMatch).where(JobMatch.id == match_id)
         if load_job:
             stmt = stmt.options(selectinload(JobMatch.job))
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_match_with_relations(
+        self, session: AsyncSession, match_id: uuid.UUID
+    ) -> JobMatch | None:
+        """Fetch a match by ID loading job and candidate profile with skills."""
+        stmt = (
+            select(JobMatch)
+            .where(JobMatch.id == match_id)
+            .options(
+                selectinload(JobMatch.job),
+                selectinload(JobMatch.candidate_profile).selectinload(CandidateProfile.skills),
+            )
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_active_resume_for_candidate(
+        self, session: AsyncSession, candidate_profile_id: uuid.UUID
+    ) -> MasterResume | None:
+        """Fetch candidate's active master resume along with parsed versions."""
+        stmt = (
+            select(MasterResume)
+            .where(
+                MasterResume.candidate_profile_id == candidate_profile_id,
+                MasterResume.is_active == True,  # noqa: E712
+            )
+            .options(selectinload(MasterResume.versions))
+            .limit(1)
+        )
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 
