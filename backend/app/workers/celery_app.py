@@ -18,6 +18,7 @@ celery_app = Celery(
         "app.modules.jobs.tasks",
         "app.modules.matching.tasks",
         "app.modules.tailoring.tasks",
+        "app.modules.notifications.tasks",
     ],
 )
 

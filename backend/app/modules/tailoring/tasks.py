@@ -86,6 +86,30 @@ async def _async_generate_tailored_resume(
             )
             await session.commit()
 
+            # Milestone 9 Pipeline Integration:
+            # Trigger immediate email notification task if tailoring completed successfully
+            delivery_id = None
+            if record.generation_status == TailoredResumeStatusEnum.COMPLETED:
+                try:
+                    from app.modules.notifications.service import get_notification_service
+                    from app.modules.notifications.tasks import send_email_notification_task
+
+                    notif_service = get_notification_service()
+                    delivery = await notif_service.create_or_get_delivery_for_tailored_resume(
+                        session=session,
+                        tailored_resume_id=record.id,
+                    )
+                    await session.commit()
+                    delivery_id = str(delivery.id)
+                    send_email_notification_task.delay(delivery_id)
+                    logger.info(
+                        f"Scheduled immediate email notification task for delivery {delivery_id}"
+                    )
+                except Exception as notif_exc:
+                    logger.warning(
+                        f"Could not dispatch email notification for tailored resume {record.id}: {notif_exc}"
+                    )
+
             return {
                 "status": "SUCCESS"
                 if record.generation_status == TailoredResumeStatusEnum.COMPLETED
@@ -96,6 +120,7 @@ async def _async_generate_tailored_resume(
                 "file_size_bytes": record.file_size_bytes,
                 "checksum_sha256": record.checksum_sha256,
                 "validation_error": record.validation_error,
+                "notification_delivery_id": delivery_id,
             }
     except Exception as exc:
         logger.warning(

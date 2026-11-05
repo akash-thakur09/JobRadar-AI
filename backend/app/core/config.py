@@ -114,15 +114,48 @@ class Settings(BaseSettings):
         description="Maximum regeneration attempts on claim validation failure",
     )
 
-    # Future Integrations (Placeholders)
+    # Local File Storage
     storage_dir: str = Field(
         default="storage",
         description="Root directory for local file storage",
     )
+
+    # Email Notification & Delivery (Milestone 9)
+    email_provider: str = Field(
+        default="smtp",
+        description="Email provider implementation ('smtp', 'mock')",
+    )
     smtp_host: str = Field(default="localhost", description="Outbound SMTP hostname")
     smtp_port: int = Field(default=1025, description="Outbound SMTP port")
-    smtp_user: str = Field(default="", description="SMTP username")
+    smtp_username: str = Field(default="", description="SMTP username")
+    smtp_user: str = Field(default="", description="Legacy alias for SMTP username")
     smtp_password: str = Field(default="", description="SMTP password")
+    smtp_from_email: str = Field(
+        default="notifications@jobradar.ai",
+        description="Outbound sender email address",
+    )
+    smtp_from_name: str = Field(
+        default="JobRadar AI",
+        description="Outbound sender display name",
+    )
+    smtp_use_tls: bool = Field(default=False, description="Enable TLS/STARTTLS for SMTP connection")
+    smtp_timeout_seconds: float = Field(
+        default=15.0,
+        description="SMTP connection and socket timeout in seconds",
+    )
+    email_max_retries: int = Field(
+        default=3,
+        description="Maximum retry attempts for transient email failures",
+    )
+    email_retry_backoff: float = Field(
+        default=10.0,
+        description="Base retry backoff seconds for email tasks",
+    )
+
+    @property
+    def effective_smtp_username(self) -> str:
+        """Resolve effective SMTP username considering both smtp_username and legacy smtp_user."""
+        return self.smtp_username or self.smtp_user
 
     @property
     def is_production(self) -> bool:
