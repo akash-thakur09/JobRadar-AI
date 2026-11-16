@@ -8,6 +8,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.jobs import jobs_router
 from app.api.routes.matches import matches_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.pipeline import router as pipeline_router
 from app.api.routes.resumes import router as resumes_router
 from app.api.routes.tailored_resumes import router as tailored_resumes_router
 
@@ -36,3 +37,6 @@ api_v1_router.include_router(tailored_resumes_router)
 
 # Register email notification and delivery routes
 api_v1_router.include_router(notifications_router)
+
+# Register pipeline orchestration and scheduling routes (Milestone 10)
+api_v1_router.include_router(pipeline_router)

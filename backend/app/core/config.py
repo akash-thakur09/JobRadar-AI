@@ -147,6 +147,23 @@ class Settings(BaseSettings):
         default=3,
         description="Maximum retry attempts for transient email failures",
     )
+    pipeline_scheduler_enabled: bool = Field(
+        default=False,
+        description="Whether the automated pipeline scheduler is enabled",
+    )
+    pipeline_discovery_interval_hours: int = Field(
+        default=6,
+        description="Default interval in hours between automated candidate pipeline runs",
+    )
+    pipeline_max_concurrent_runs_per_candidate: int = Field(
+        default=1,
+        description="Maximum concurrent active pipeline runs per candidate profile",
+    )
+    pipeline_lock_ttl_seconds: int = Field(
+        default=600,
+        description="TTL for distributed pipeline execution locks in seconds",
+    )
+
     email_retry_backoff: float = Field(
         default=10.0,
         description="Base retry backoff seconds for email tasks",

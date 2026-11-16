@@ -19,8 +19,8 @@ async def test_liveness_endpoint(async_client: AsyncClient) -> None:
 
 
 @pytest.mark.unit
-async def test_readiness_endpoint_all_healthy(async_client: AsyncClient) -> None:
-    """Verify that /health/ready returns 200 when all components are healthy."""
+async def test_root_health_and_ready_endpoints(async_client: AsyncClient) -> None:
+    """Verify that /health and /ready root-level operational aliases return 200."""
     with (
         patch("app.api.routes.health.check_db_health", new_callable=AsyncMock) as mock_db,
         patch("app.api.routes.health.check_redis_health", new_callable=AsyncMock) as mock_redis,
@@ -28,12 +28,61 @@ async def test_readiness_endpoint_all_healthy(async_client: AsyncClient) -> None
         mock_db.return_value = (True, "healthy")
         mock_redis.return_value = (True, "healthy")
 
+        live_res = await async_client.get("/health")
+        assert live_res.status_code == 200
+        assert live_res.json()["status"] == "healthy"
+
+        ready_res = await async_client.get("/ready")
+        assert ready_res.status_code == 200
+        assert ready_res.json()["status"] == "healthy"
+
+
+@pytest.mark.unit
+async def test_readiness_endpoint_all_healthy(async_client: AsyncClient) -> None:
+    """Verify that /health/ready returns 200 when all components are healthy."""
+    with (
+        patch("app.api.routes.health.check_db_health", new_callable=AsyncMock) as mock_db,
+        patch("app.api.routes.health.check_redis_health", new_callable=AsyncMock) as mock_redis,
+        patch("app.modules.matching.llm.factory.get_llm_provider") as mock_llm_factory,
+    ):
+        mock_db.return_value = (True, "healthy")
+        mock_redis.return_value = (True, "healthy")
+        mock_llm = AsyncMock()
+        mock_llm.ping = AsyncMock(return_value=True)
+        mock_llm_factory.return_value = mock_llm
+
         response = await async_client.get("/api/v1/health/ready")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
         assert data["components"]["database"] == "healthy"
         assert data["components"]["redis"] == "healthy"
+        assert data["components"]["ollama"] == "healthy"
+
+
+@pytest.mark.unit
+async def test_readiness_endpoint_ollama_offline_does_not_fail_readiness(
+    async_client: AsyncClient,
+) -> None:
+    """Verify that /health/ready remains 200 healthy when Ollama is offline (graceful degradation)."""
+    with (
+        patch("app.api.routes.health.check_db_health", new_callable=AsyncMock) as mock_db,
+        patch("app.api.routes.health.check_redis_health", new_callable=AsyncMock) as mock_redis,
+        patch("app.modules.matching.llm.factory.get_llm_provider") as mock_llm_factory,
+    ):
+        mock_db.return_value = (True, "healthy")
+        mock_redis.return_value = (True, "healthy")
+        mock_llm = AsyncMock()
+        mock_llm.ping = AsyncMock(return_value=False)
+        mock_llm_factory.return_value = mock_llm
+
+        response = await async_client.get("/api/v1/health/ready")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["components"]["database"] == "healthy"
+        assert data["components"]["redis"] == "healthy"
+        assert data["components"]["ollama"] == "degraded (offline)"
 
 
 @pytest.mark.unit

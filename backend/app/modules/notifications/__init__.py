@@ -17,4 +17,3 @@ __all__ = [
     "NotificationTypeEnum",
     "get_notification_service",
 ]
-

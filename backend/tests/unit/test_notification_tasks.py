@@ -154,4 +154,3 @@ async def test_notification_task_retries_on_timeout():
                 await _async_send_email_notification(mock_task, str(delivery_id))
 
     mock_task.retry.assert_called_once()
-

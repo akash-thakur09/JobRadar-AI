@@ -12,6 +12,7 @@ import app.modules.discovery.models  # noqa: F401
 import app.modules.jobs.models  # noqa: F401
 import app.modules.matching.models  # noqa: F401
 import app.modules.notifications.models  # noqa: F401
+import app.modules.pipeline.models  # noqa: F401
 import app.modules.tailoring.models  # noqa: F401
 from alembic import context
 from app.core.config import get_settings

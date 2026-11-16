@@ -16,4 +16,3 @@ class NotificationTypeEnum(StrEnum):
     """Supported notification delivery message categories."""
 
     IMMEDIATE_TAILORED_JOB = "IMMEDIATE_TAILORED_JOB"
-

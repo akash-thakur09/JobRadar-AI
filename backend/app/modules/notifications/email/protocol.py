@@ -68,4 +68,3 @@ class EmailProvider(Protocol):
     async def ping(self) -> bool:
         """Verify reachability and readiness of the underlying email provider service."""
         ...
-

@@ -182,4 +182,3 @@ def downgrade() -> None:
         name="notification_delivery_status_enum",
     )
     notification_delivery_status_enum.drop(op.get_bind(), checkfirst=True)
-

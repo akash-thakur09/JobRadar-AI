@@ -92,4 +92,3 @@ def test_build_job_notification_email(
     assert att.filename == "Alex_Mercer_Acme_Robotics_Resume.pdf"
     assert att.content == pdf_bytes
     assert att.content_type == "application/pdf"
-
