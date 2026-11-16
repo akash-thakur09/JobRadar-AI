@@ -50,6 +50,10 @@ postgres_data/
 redis_data/
 storage/
 
+# Node & Frontend
+node_modules/
+dist/
+
 # Logs
 *.log
 logs/
