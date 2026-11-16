@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { User, PlayCircle, ShieldCheck, FileText, Sparkles } from "lucide-react";
+import { User, PlayCircle, ShieldCheck, FileText, Sparkles, Bell } from "lucide-react";
 import { LoadingState } from "@/components/common/LoadingState";
 import {
   useCandidatePreferences,
@@ -115,7 +115,7 @@ export function DashboardPage() {
           Matching operates via a 3-layer deterministic and LLM hierarchy, while resume tailoring enforces Evidence Vault claim validation to eliminate hallucinations.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-terminal-warmBorder">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-terminal-warmBorder">
           <Link
             to="/profile"
             className="flex items-center justify-between p-3 rounded-card border border-terminal-warmBorder bg-terminal-warm/60 hover:bg-terminal-warm transition-colors"
@@ -167,6 +167,20 @@ export function DashboardPage() {
               <div className="truncate">
                 <span className="text-xs font-semibold font-display text-terminal-dark block truncate">Pipeline Runs</span>
                 <span className="text-[11px] text-terminal-muted truncate block">End-to-end telemetry</span>
+              </div>
+            </div>
+            <span className="text-xs text-terminal-primary font-mono font-medium ml-2">&rarr;</span>
+          </Link>
+
+          <Link
+            to="/notifications"
+            className="flex items-center justify-between p-3 rounded-card border border-terminal-warmBorder bg-terminal-warm/60 hover:bg-terminal-warm transition-colors"
+          >
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <Bell className="w-4 h-4 text-terminal-primary shrink-0" />
+              <div className="truncate">
+                <span className="text-xs font-semibold font-display text-terminal-dark block truncate">Notifications</span>
+                <span className="text-[11px] text-terminal-muted truncate block">Delivery & retry audit</span>
               </div>
             </div>
             <span className="text-xs text-terminal-primary font-mono font-medium ml-2">&rarr;</span>

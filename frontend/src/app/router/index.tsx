@@ -3,6 +3,9 @@ import { AppLayout } from "@/app/layouts/AppLayout";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { CandidateProfilePage } from "@/features/candidate/pages/CandidateProfilePage";
 import { PipelineMonitoringPage } from "@/features/pipeline/pages/PipelineMonitoringPage";
+import { PipelineRunDetailPage } from "@/features/pipeline/pages/PipelineRunDetailPage";
+import { NotificationsPage } from "@/features/notifications/pages/NotificationsPage";
+import { NotificationDetailPage } from "@/features/notifications/pages/NotificationDetailPage";
 import { JobsDiscoveryPage } from "@/features/jobs/pages/JobsDiscoveryPage";
 import { JobDetailPage } from "@/features/jobs/pages/JobDetailPage";
 import { MatchesPage } from "@/features/matches/pages/MatchesPage";
@@ -12,7 +15,7 @@ import { ResumeDetailPage } from "@/features/resumes/pages/ResumeDetailPage";
 import { TailoredResumesPage } from "@/features/tailored-resumes/pages/TailoredResumesPage";
 import { TailoredResumeDetailPage } from "@/features/tailored-resumes/pages/TailoredResumeDetailPage";
 import { PlaceholderPage } from "@/features/placeholder/pages/PlaceholderPage";
-import { Bell, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 
 export const router = createBrowserRouter([
   {
@@ -68,21 +71,16 @@ export const router = createBrowserRouter([
         element: <PipelineMonitoringPage />,
       },
       {
+        path: "pipeline/:runId",
+        element: <PipelineRunDetailPage />,
+      },
+      {
         path: "notifications",
-        element: (
-          <PlaceholderPage
-            title="Notifications"
-            description="Immediate email delivery logs, PDF attachments, and retry tracking"
-            icon={Bell}
-            targetMilestone="Milestone 15"
-            plannedFeatures={[
-              "Immediate email dispatch delivery audit log",
-              "Recipient delivery confirmation and SMTP message-IDs",
-              "Attached tailored PDF verification and preview",
-              "Delivery failure reasons and automatic retry tracking",
-            ]}
-          />
-        ),
+        element: <NotificationsPage />,
+      },
+      {
+        path: "notifications/:notificationId",
+        element: <NotificationDetailPage />,
       },
       {
         path: "settings",
@@ -101,10 +99,10 @@ export const router = createBrowserRouter([
           />
         ),
       },
-      {
-        path: "*",
-        element: <Navigate to="/" replace />,
-      },
     ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
   },
 ]);

@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Resumes", href: "/resumes", icon: FileText },
   { label: "Tailored Resumes", href: "/tailored-resumes", icon: FileCheck },
   { label: "Pipeline Runs", href: "/pipeline", icon: PlayCircle },
-  { label: "Notifications", href: "/notifications", icon: Bell, isPlaceholder: true },
+  { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Settings", href: "/settings", icon: Settings, isPlaceholder: true },
 ];
 
