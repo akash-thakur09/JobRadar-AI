@@ -31,9 +31,21 @@ export function useReevaluateMatch() {
   return useMutation({
     mutationFn: ({ jobId, candidateProfileId }: { jobId: string; candidateProfileId?: string }) =>
       matchesService.reEvaluateMatch(jobId, candidateProfileId),
-    onSuccess: () => {
+    onSuccess: (updatedMatch) => {
+      queryClient.setQueryData(matchKeys.detail(updatedMatch.id), updatedMatch);
       queryClient.invalidateQueries({ queryKey: matchKeys.lists() });
     },
   });
 }
 
+export function useTriggerSemanticAnalysis() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (matchId: string) => matchesService.triggerSemanticAnalysis(matchId),
+    onSuccess: (updatedMatch) => {
+      queryClient.setQueryData(matchKeys.detail(updatedMatch.id), updatedMatch);
+      queryClient.invalidateQueries({ queryKey: matchKeys.lists() });
+    },
+  });
+}

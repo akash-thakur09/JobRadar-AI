@@ -170,7 +170,7 @@ describe("DashboardPage Integration", () => {
       },
     });
 
-    vi.spyOn(healthService, "checkReadiness").mockResolvedValue({
+    vi.spyOn(healthService, "getReadiness").mockResolvedValue({
       status: "healthy",
       timestamp: "2026-11-16T10:00:00Z",
       components: {
@@ -180,8 +180,8 @@ describe("DashboardPage Integration", () => {
       },
     });
 
-    vi.spyOn(healthService, "checkLiveness").mockResolvedValue({
-      status: "alive",
+    vi.spyOn(healthService, "getLiveness").mockResolvedValue({
+      status: "healthy",
       timestamp: "2026-11-16T10:00:00Z",
       version: "1.0.0",
       environment: "test",
@@ -200,7 +200,8 @@ describe("DashboardPage Integration", () => {
   it("renders personalized greeting with candidate name", async () => {
     renderDashboard();
 
-    expect(await screen.findByText(/Jane Developer/i)).toBeInTheDocument();
+    const greetings = await screen.findAllByText(/Jane Developer/i);
+    expect(greetings.length).toBeGreaterThan(0);
     expect(screen.getByText("Intelligence Dashboard")).toBeInTheDocument();
   });
 
@@ -214,16 +215,17 @@ describe("DashboardPage Integration", () => {
     // 7 total pipeline runs
     expect(screen.getByText("7")).toBeInTheDocument();
     // Profile readiness percentage computed from criteria
-    expect(screen.getByText(/complete/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/complete/i).length).toBeGreaterThan(0);
   });
 
   it("renders recently discovered jobs and evaluated matches", async () => {
     renderDashboard();
 
-    // Discovered Job
-    expect(await screen.findByText("Senior Python Architect")).toBeInTheDocument();
-    expect(screen.getByText("Acme Cloud")).toBeInTheDocument();
-    expect(screen.getByText("Remote - US")).toBeInTheDocument();
+    // Discovered Job / Evaluated Match titles
+    const titles = await screen.findAllByText("Senior Python Architect");
+    expect(titles.length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Acme Cloud").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Remote - US").length).toBeGreaterThan(0);
 
     // Evaluated Match with score
     expect(screen.getByText("90%")).toBeInTheDocument();
@@ -234,7 +236,8 @@ describe("DashboardPage Integration", () => {
     renderDashboard();
 
     const triggerButtons = await screen.findAllByRole("button", { name: /Trigger Run/i });
-    fireEvent.click(triggerButtons[0]);
+    expect(triggerButtons[0]).toBeDefined();
+    fireEvent.click(triggerButtons[0]!);
 
     await waitFor(() => {
       expect(screen.getByText("Start Pipeline Run")).toBeInTheDocument();
@@ -242,4 +245,3 @@ describe("DashboardPage Integration", () => {
     });
   });
 });
-

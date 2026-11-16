@@ -27,8 +27,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Candidate Profile", href: "/profile", icon: User },
-  { label: "Job Discovery", href: "/discovery", icon: Globe, isPlaceholder: true },
-  { label: "Job Matches", href: "/matches", icon: Sparkles, isPlaceholder: true },
+  { label: "Job Discovery", href: "/jobs", icon: Globe },
+  { label: "Job Matches", href: "/matches", icon: Sparkles },
   { label: "Resumes", href: "/resumes", icon: FileText, isPlaceholder: true },
   { label: "Notifications", href: "/notifications", icon: Bell, isPlaceholder: true },
   { label: "Pipeline Runs", href: "/pipeline", icon: PlayCircle },
@@ -179,4 +179,3 @@ export function Sidebar() {
     </>
   );
 }
-

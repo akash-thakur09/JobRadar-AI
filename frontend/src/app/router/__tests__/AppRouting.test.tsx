@@ -47,20 +47,20 @@ describe("App Shell & Routing Navigation", () => {
 
   it("renders placeholder page for unimplemented milestone routes", () => {
     renderWithClient(
-      <MemoryRouter initialEntries={["/discovery"]}>
+      <MemoryRouter initialEntries={["/resumes"]}>
         <PlaceholderPage
-          title="Job Discovery"
-          description="Integrated job boards"
+          title="Resume Management"
+          description="Tailored resumes"
           icon={Globe}
-          targetMilestone="Milestone 12"
-          plannedFeatures={["Crawlers", "Health check"]}
+          targetMilestone="Milestone 14"
+          plannedFeatures={["Uploads", "Tailoring"]}
         />
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Job Discovery Module")).toBeInTheDocument();
-    expect(screen.getByText(/Planned for Milestone 12/i)).toBeInTheDocument();
-    expect(screen.getByText("Crawlers")).toBeInTheDocument();
+    expect(screen.getByText("Resume Management Module")).toBeInTheDocument();
+    expect(screen.getByText(/Planned for Milestone 14/i)).toBeInTheDocument();
+    expect(screen.getByText("Uploads")).toBeInTheDocument();
   });
 
   it("supports navigation via memory router", () => {
@@ -98,16 +98,8 @@ describe("App Shell & Routing Navigation", () => {
           children: [
             { index: true, element: <DashboardPage /> },
             {
-              path: "discovery",
-              element: (
-                <PlaceholderPage
-                  title="Job Discovery"
-                  description="Discovery placeholder"
-                  icon={Globe}
-                  targetMilestone="Milestone 12"
-                  plannedFeatures={[]}
-                />
-              ),
+              path: "jobs",
+              element: <div>Job Discovery Destination</div>,
             },
           ],
         },
@@ -123,11 +115,10 @@ describe("App Shell & Routing Navigation", () => {
 
     expect(screen.getByText("Intelligence Dashboard")).toBeInTheDocument();
 
-    // Click on Job Discovery in sidebar
+    // Click on Job Discovery in sidebar (href: /jobs)
     const discoveryLink = screen.getByRole("link", { name: /Job Discovery/i });
     fireEvent.click(discoveryLink);
 
-    expect(screen.getByText("Job Discovery Module")).toBeInTheDocument();
+    expect(screen.getByText("Job Discovery Destination")).toBeInTheDocument();
   });
 });
-
