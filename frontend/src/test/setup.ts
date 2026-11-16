@@ -31,3 +31,11 @@ class ResizeObserverMock {
 
 window.ResizeObserver = ResizeObserverMock;
 
+// Mock URL.createObjectURL and revokeObjectURL for Blob downloads and PDF previews
+if (!window.URL.createObjectURL) {
+  window.URL.createObjectURL = vi.fn(() => "blob:http://localhost/mock-blob-url");
+}
+if (!window.URL.revokeObjectURL) {
+  window.URL.revokeObjectURL = vi.fn();
+}
+

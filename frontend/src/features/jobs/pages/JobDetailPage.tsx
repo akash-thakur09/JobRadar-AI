@@ -19,11 +19,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatDate } from "@/lib/utils";
 import { JobSourcesList } from "../components/JobSourcesList";
+import { TailorResumeModal } from "@/features/tailored-resumes/components/TailorResumeModal";
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const [evaluateSuccessMsg, setEvaluateSuccessMsg] = useState<string | null>(null);
+  const [isTailorModalOpen, setIsTailorModalOpen] = useState(false);
 
   const { data: job, isLoading, error, refetch } = useJob(jobId || "");
   const reevaluateMutation = useReevaluateMatch();
@@ -79,19 +81,18 @@ export function JobDetailPage() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "ACTIVE":
+      case "OPEN":
         return "success";
-      case "DISCOVERED":
-        return "brand";
-      case "EXPIRED":
-      case "ARCHIVED":
+      case "CLOSED":
         return "danger";
+      case "DRAFT":
+        return "warning";
       default:
         return "neutral";
     }
   };
 
-  const displayDate = job.posted_at || job.first_seen_at || job.created_at;
+  const displayDate = job.posted_at || job.created_at;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -175,6 +176,17 @@ export function JobDetailPage() {
                 <span>Evaluate Match</span>
               </Button>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTailorModalOpen(true)}
+                className="gap-1.5 text-xs shadow-subtle"
+                title="Tailor your active resume specifically for this position"
+              >
+                <FileText className="w-3.5 h-3.5 text-terminal-primary" />
+                <span>Tailor Resume</span>
+              </Button>
+
               {job.canonical_application_url && (
                 <a
                   href={job.canonical_application_url}
@@ -219,6 +231,17 @@ export function JobDetailPage() {
         sources={job.sources || []}
         dedupFingerprint={job.dedup_fingerprint_sha256}
       />
+
+      {/* Tailor Resume Modal */}
+      {isTailorModalOpen && (
+        <TailorResumeModal
+          isOpen={isTailorModalOpen}
+          onClose={() => setIsTailorModalOpen(false)}
+          jobId={job.id}
+          jobTitle={job.title}
+          companyName={job.canonical_company_name}
+        />
+      )}
     </div>
   );
 }

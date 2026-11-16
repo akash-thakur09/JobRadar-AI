@@ -3,6 +3,7 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  FileCheck,
   FileText,
   Globe,
   LayoutDashboard,
@@ -29,9 +30,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Candidate Profile", href: "/profile", icon: User },
   { label: "Job Discovery", href: "/jobs", icon: Globe },
   { label: "Job Matches", href: "/matches", icon: Sparkles },
-  { label: "Resumes", href: "/resumes", icon: FileText, isPlaceholder: true },
-  { label: "Notifications", href: "/notifications", icon: Bell, isPlaceholder: true },
+  { label: "Resumes", href: "/resumes", icon: FileText },
+  { label: "Tailored Resumes", href: "/tailored-resumes", icon: FileCheck },
   { label: "Pipeline Runs", href: "/pipeline", icon: PlayCircle },
+  { label: "Notifications", href: "/notifications", icon: Bell, isPlaceholder: true },
   { label: "Settings", href: "/settings", icon: Settings, isPlaceholder: true },
 ];
 

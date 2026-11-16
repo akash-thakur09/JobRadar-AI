@@ -7,8 +7,12 @@ import { JobsDiscoveryPage } from "@/features/jobs/pages/JobsDiscoveryPage";
 import { JobDetailPage } from "@/features/jobs/pages/JobDetailPage";
 import { MatchesPage } from "@/features/matches/pages/MatchesPage";
 import { MatchDetailPage } from "@/features/matches/pages/MatchDetailPage";
+import { ResumesPage } from "@/features/resumes/pages/ResumesPage";
+import { ResumeDetailPage } from "@/features/resumes/pages/ResumeDetailPage";
+import { TailoredResumesPage } from "@/features/tailored-resumes/pages/TailoredResumesPage";
+import { TailoredResumeDetailPage } from "@/features/tailored-resumes/pages/TailoredResumeDetailPage";
 import { PlaceholderPage } from "@/features/placeholder/pages/PlaceholderPage";
-import { Bell, FileText, Settings } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
 
 export const router = createBrowserRouter([
   {
@@ -44,25 +48,24 @@ export const router = createBrowserRouter([
         element: <MatchDetailPage />,
       },
       {
-        path: "pipeline",
-        element: <PipelineMonitoringPage />,
+        path: "resumes",
+        element: <ResumesPage />,
       },
       {
-        path: "resumes",
-        element: (
-          <PlaceholderPage
-            title="Resumes & Tailoring"
-            description="Master resume management, deterministic parsing, and truthful tailored PDF generation"
-            icon={FileText}
-            targetMilestone="Milestone 14"
-            plannedFeatures={[
-              "Master resume PDF/DOCX upload and active version toggle",
-              "Parsed structured content and template metadata inspection",
-              "Truthful tailored resume generation against candidate Evidence Vault",
-              "ATS single-column PDF previews and direct downloads",
-            ]}
-          />
-        ),
+        path: "resumes/:resumeId",
+        element: <ResumeDetailPage />,
+      },
+      {
+        path: "tailored-resumes",
+        element: <TailoredResumesPage />,
+      },
+      {
+        path: "tailored-resumes/:tailoredResumeId",
+        element: <TailoredResumeDetailPage />,
+      },
+      {
+        path: "pipeline",
+        element: <PipelineMonitoringPage />,
       },
       {
         path: "notifications",

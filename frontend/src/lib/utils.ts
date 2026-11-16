@@ -80,3 +80,30 @@ export function extractErrorMessage(error: unknown, fallbackMessage = "An unexpe
   return fallbackMessage;
 }
 
+/**
+ * Format bytes into human readable string (KB, MB, etc.)
+ */
+export function formatBytes(bytes: number, decimals = 1): string {
+  if (!bytes || bytes <= 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+/**
+ * Trigger browser file download from Blob and safely revoke temporary object URL
+ */
+export function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => {
+    window.URL.revokeObjectURL(url);
+  }, 500);
+}

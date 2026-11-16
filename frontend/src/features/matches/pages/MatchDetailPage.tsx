@@ -12,6 +12,7 @@ import {
   XCircle,
   Briefcase,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { useMatch, useReevaluateMatch, useTriggerSemanticAnalysis } from "@/hooks/useMatches";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -24,10 +25,12 @@ import { EligibilityBadge } from "../components/EligibilityBadge";
 import { MatchScoreBadge } from "../components/MatchScoreBadge";
 import { DeterministicScoreBreakdown } from "../components/DeterministicScoreBreakdown";
 import { SemanticAnalysisSection } from "../components/SemanticAnalysisSection";
+import { TailorResumeModal } from "@/features/tailored-resumes/components/TailorResumeModal";
 
 export function MatchDetailPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isTailorModalOpen, setIsTailorModalOpen] = useState(false);
 
   const { data: match, isLoading, error, refetch } = useMatch(matchId || "");
   const reevaluateMutation = useReevaluateMatch();
@@ -172,6 +175,17 @@ export function MatchDetailPage() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setIsTailorModalOpen(true)}
+                  className="text-xs gap-1.5 shadow-subtle"
+                  title="Generate truthful tailored ATS resume for this opportunity"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Tailor Resume</span>
+                </Button>
+
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={handleReevaluate}
@@ -294,6 +308,19 @@ export function MatchDetailPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Tailor Resume Modal */}
+      {isTailorModalOpen && (
+        <TailorResumeModal
+          isOpen={isTailorModalOpen}
+          onClose={() => setIsTailorModalOpen(false)}
+          jobId={match.job_id}
+          jobTitle={match.job_title ?? undefined}
+          companyName={match.company_name ?? undefined}
+          jobMatchId={match.id}
+          isQualified={match.is_qualified}
+        />
       )}
     </div>
   );
