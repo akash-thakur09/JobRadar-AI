@@ -4,11 +4,12 @@
 import type { EmploymentType, WorkplaceType } from "./candidate";
 
 export type JobStatus =
-  | "PENDING"
-  | "CANONICALIZED"
+  | "DISCOVERED"
   | "ACTIVE"
   | "EXPIRED"
   | "ARCHIVED"
+  | "PENDING"
+  | "CANONICALIZED"
   | string;
 
 export interface JobSourceRecord {

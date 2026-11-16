@@ -3,7 +3,7 @@
  */
 
 export type WorkplaceType = "REMOTE" | "HYBRID" | "ONSITE";
-export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP";
+export type EmploymentType = "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | "UNKNOWN";
 
 export interface CandidateProfile {
   id: string;

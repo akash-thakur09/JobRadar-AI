@@ -3,8 +3,12 @@ import { AppLayout } from "@/app/layouts/AppLayout";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { CandidateProfilePage } from "@/features/candidate/pages/CandidateProfilePage";
 import { PipelineMonitoringPage } from "@/features/pipeline/pages/PipelineMonitoringPage";
+import { JobsDiscoveryPage } from "@/features/jobs/pages/JobsDiscoveryPage";
+import { JobDetailPage } from "@/features/jobs/pages/JobDetailPage";
+import { MatchesPage } from "@/features/matches/pages/MatchesPage";
+import { MatchDetailPage } from "@/features/matches/pages/MatchDetailPage";
 import { PlaceholderPage } from "@/features/placeholder/pages/PlaceholderPage";
-import { Bell, FileText, Globe, Settings, Sparkles } from "lucide-react";
+import { Bell, FileText, Settings } from "lucide-react";
 
 export const router = createBrowserRouter([
   {
@@ -20,42 +24,28 @@ export const router = createBrowserRouter([
         element: <CandidateProfilePage />,
       },
       {
-        path: "pipeline",
-        element: <PipelineMonitoringPage />,
+        path: "jobs",
+        element: <JobsDiscoveryPage />,
+      },
+      {
+        path: "jobs/:jobId",
+        element: <JobDetailPage />,
       },
       {
         path: "discovery",
-        element: (
-          <PlaceholderPage
-            title="Job Discovery"
-            description="Manage integrated job boards, Greenhouse and Lever ATS connectors, and automated crawler runs"
-            icon={Globe}
-            targetMilestone="Milestone 12"
-            plannedFeatures={[
-              "Job board registry (Greenhouse, Lever, Career Page crawlers)",
-              "Manual discovery triggers and status polling",
-              "Discovered raw job payload inspection and deduplication hashes",
-              "Source health and ingestion failure diagnostics",
-            ]}
-          />
-        ),
+        element: <Navigate to="/jobs" replace />,
       },
       {
         path: "matches",
-        element: (
-          <PlaceholderPage
-            title="Job Matches"
-            description="Inspect deterministic eligibility, weighted match scoring, and Layer 3 LLM semantic analysis"
-            icon={Sparkles}
-            targetMilestone="Milestone 13"
-            plannedFeatures={[
-              "Search and filter candidate-specific job matches",
-              "Layer 1 eligibility audit breakdown (Workplace, Experience, Title)",
-              "Layer 2 trigram and weighted skill score inspection",
-              "Layer 3 Ollama LLM contextual fit and transferable skills",
-            ]}
-          />
-        ),
+        element: <MatchesPage />,
+      },
+      {
+        path: "matches/:matchId",
+        element: <MatchDetailPage />,
+      },
+      {
+        path: "pipeline",
+        element: <PipelineMonitoringPage />,
       },
       {
         path: "resumes",
@@ -115,4 +105,3 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-
