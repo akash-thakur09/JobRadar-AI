@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { candidateService } from "@/services/candidate.service";
-import type { CandidatePreferencesUpdate, CandidateProfileUpdate } from "@/types/candidate";
+import type {
+  CandidatePreferencesUpdate,
+  CandidateProfileUpdate,
+  CandidateSkillCreate,
+} from "@/types/candidate";
 
 export const candidateKeys = {
   all: ["candidate"] as const,
@@ -54,3 +58,24 @@ export function useCandidateSkills() {
   });
 }
 
+export function useAddCandidateSkill() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CandidateSkillCreate) => candidateService.addSkill(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: candidateKeys.skills() });
+    },
+  });
+}
+
+export function useDeleteCandidateSkill() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (skillId: string) => candidateService.deleteSkill(skillId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: candidateKeys.skills() });
+    },
+  });
+}

@@ -10,6 +10,7 @@ import {
 import { ProfileCard } from "../components/ProfileCard";
 import { PreferencesCard } from "../components/PreferencesCard";
 import { SkillsList } from "../components/SkillsList";
+import { ProfileCompletionWidget } from "../components/ProfileCompletionWidget";
 import { User } from "lucide-react";
 
 export function CandidateProfilePage() {
@@ -70,6 +71,13 @@ export function CandidateProfilePage() {
         breadcrumbs={[{ label: "Candidate Profile" }]}
       />
 
+      {/* Profile Readiness & Completion Widget */}
+      <ProfileCompletionWidget
+        profile={profile}
+        preferences={preferences}
+        skills={skills}
+      />
+
       <div className="grid grid-cols-1 gap-6">
         {/* Core Profile Card */}
         <ProfileCard profile={profile} />
@@ -83,4 +91,3 @@ export function CandidateProfilePage() {
     </div>
   );
 }
-
