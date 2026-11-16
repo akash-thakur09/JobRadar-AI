@@ -384,6 +384,84 @@ curl -X POST "http://localhost:8000/api/v1/matches/<JOB_UUID>/re-evaluate"
 
 ---
 
+## Pipeline Orchestration & Scheduling (Milestone 10)
+
+Milestone 10 coordinates the entire JobRadar AI pipeline—Discovery, Canonicalization, Matching, Semantic Analysis, Resume Tailoring, and Email Notifications—with durable run persistence, atomic metric tracking, and concurrency protection.
+
+### 1. Trigger a Pipeline Run
+
+```bash
+curl -X POST http://localhost:8000/api/v1/pipeline-runs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "candidate_profile_id": "<CANDIDATE_PROFILE_UUID>",
+    "trigger_type": "MANUAL"
+  }'
+```
+
+Returns `202 Accepted` with initial status `PENDING` and assigned Celery task id.
+
+### 2. Check Pipeline Run Status & Metrics
+
+```bash
+curl -s http://localhost:8000/api/v1/pipeline-runs/<RUN_UUID>
+```
+
+Sample JSON response:
+```json
+{
+  "id": "b588caef-f769-465c-b67e-8ea6f0a42ebb",
+  "candidate_profile_id": "987a033e-e243-4160-ae6a-fd8b2a402645",
+  "trigger_type": "MANUAL",
+  "status": "COMPLETED",
+  "started_at": "2026-11-05T11:24:17.818091Z",
+  "completed_at": "2026-11-05T11:24:20.069445Z",
+  "metrics": {
+    "jobs_discovered": 4,
+    "jobs_created": 1,
+    "jobs_updated": 0,
+    "jobs_normalized": 1,
+    "jobs_deduplicated": 0,
+    "jobs_evaluated": 1,
+    "matches_created": 1,
+    "matches_qualified": 1,
+    "semantic_analyses_completed": 1,
+    "semantic_analyses_failed": 0,
+    "resumes_generated": 1,
+    "resumes_failed": 0,
+    "notifications_sent": 1,
+    "notifications_failed": 0
+  },
+  "error_summary": null,
+  "created_at": "2026-11-05T11:24:17.516691Z",
+  "updated_at": "2026-11-05T11:24:20.070449Z"
+}
+```
+
+### 3. Cancel an Active Pipeline Run
+
+```bash
+curl -X POST http://localhost:8000/api/v1/pipeline-runs/<RUN_UUID>/cancel
+```
+
+### 4. Standalone Pipeline Scheduler Daemon
+
+In addition to Celery Beat periodic tasks, a local-first standalone scheduler daemon with Redis leader election can be run:
+
+```bash
+cd backend
+python -m app.modules.pipeline.scheduler
+```
+
+Guarantees only one active leader scheduler across multiple processes or containers via Redis key `lock:pipeline_scheduler:leader`.
+
+### 5. Operational Health & Readiness Endpoints
+
+- **Root Liveness:** `GET http://localhost:8000/health` (also `/api/v1/health`)
+- **Root Readiness:** `GET http://localhost:8000/ready` (tests live PostgreSQL, Redis, and optional Ollama connectivity)
+
+---
+
 ## Background Processing & Task Architecture
 
 - **Source Adapter Contract:** Abstract `JobSourceAdapter` interface (`GreenhouseAdapter`, `LeverAdapter`, `CareerPageAdapter`) with decoupled HTTP client lifecycle.

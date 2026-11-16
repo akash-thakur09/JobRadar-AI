@@ -213,4 +213,3 @@ async def test_retry_notification_endpoint_max_retries_exceeded(
     assert response.status_code == 400
     data = response.json()
     assert "has reached maximum retry attempts" in data["detail"]
-

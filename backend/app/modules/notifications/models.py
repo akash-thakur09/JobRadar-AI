@@ -138,4 +138,3 @@ class NotificationDelivery(Base, TimestampMixin):
         Index("idx_notifications_job_match", "job_match_id"),
         Index("idx_notifications_tailored_resume", "tailored_resume_id"),
     )
-

@@ -33,4 +33,3 @@ def get_email_provider() -> EmailProvider:
         use_tls=settings.smtp_use_tls,
         timeout_seconds=settings.smtp_timeout_seconds,
     )
-

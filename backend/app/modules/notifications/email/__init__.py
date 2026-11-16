@@ -23,4 +23,3 @@ __all__ = [
     "get_email_provider",
     "set_email_provider_override",
 ]
-

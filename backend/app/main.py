@@ -91,6 +91,12 @@ def create_app() -> FastAPI:
     # Register API v1 master router
     app.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 
+    # Root level operational monitoring aliases (Milestone 10)
+    from app.api.routes.health import check_liveness, check_readiness
+
+    app.add_api_route("/health", check_liveness, methods=["GET"], include_in_schema=False)
+    app.add_api_route("/ready", check_readiness, methods=["GET"], include_in_schema=False)
+
     @app.get("/", include_in_schema=False)
     async def root_redirect() -> RedirectResponse:
         """Redirect root requests to the interactive API documentation."""

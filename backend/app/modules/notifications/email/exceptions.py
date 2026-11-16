@@ -75,4 +75,3 @@ class EmailContentError(EmailProviderError):
             error_type="email-content-error",
             retryable=False,
         )
-

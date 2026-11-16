@@ -103,6 +103,7 @@ module = [
     "app.modules.matching.tasks",
     "app.modules.tailoring.tasks",
     "app.modules.notifications.tasks",
+    "app.modules.pipeline.tasks",
 ]
 disallow_untyped_decorators = false
 disallow_untyped_calls = false
