@@ -1,34 +1,28 @@
 import { apiGet, apiPost } from "@/lib/api-client";
 import type { PaginatedResponse } from "@/types/api";
-import type { JobMatch, MatchFilterParams } from "@/types/matches";
+import type { JobMatchDetail, JobMatchSummary, MatchFilterParams } from "@/types/matches";
 
 export const matchesService = {
   /**
    * List paginated job matches
    */
-  async listMatches(params?: MatchFilterParams): Promise<PaginatedResponse<JobMatch>> {
-    return apiGet<PaginatedResponse<JobMatch>>("/matches", { params });
+  async listMatches(params?: MatchFilterParams): Promise<PaginatedResponse<JobMatchSummary>> {
+    return apiGet<PaginatedResponse<JobMatchSummary>>("/matches", { params });
   },
 
   /**
    * Fetch match details by ID
    */
-  async getMatch(matchId: string): Promise<JobMatch> {
-    return apiGet<JobMatch>(`/matches/${matchId}`);
+  async getMatch(matchId: string): Promise<JobMatchDetail> {
+    return apiGet<JobMatchDetail>(`/matches/${matchId}`);
   },
 
   /**
    * Re-evaluate match for a job on demand
    */
-  async reEvaluateMatch(jobId: string): Promise<JobMatch> {
-    return apiPost<JobMatch>(`/matches/${jobId}/re-evaluate`);
-  },
-
-  /**
-   * Trigger Layer 3 LLM semantic analysis for a match
-   */
-  async triggerSemanticAnalysis(matchId: string): Promise<JobMatch> {
-    return apiPost<JobMatch>(`/matches/${matchId}/semantic-analysis`);
+  async reEvaluateMatch(jobId: string, candidateProfileId?: string): Promise<JobMatchDetail> {
+    return apiPost<JobMatchDetail>(`/matches/${jobId}/re-evaluate`, undefined, {
+      params: candidateProfileId ? { candidate_profile_id: candidateProfileId } : undefined,
+    });
   },
 };
-

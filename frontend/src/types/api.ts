@@ -24,11 +24,11 @@ export interface PaginationMetadata {
   total_items: number;
   total_pages: number;
   has_next: boolean;
-  has_previous: boolean;
+  has_prev?: boolean;
+  has_previous?: boolean;
 }
 
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: PaginationMetadata;
 }
-

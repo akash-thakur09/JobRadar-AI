@@ -1,68 +1,110 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Play, User, PlayCircle, ShieldCheck } from "lucide-react";
-import { PageHeader } from "@/components/common/PageHeader";
+import { User, PlayCircle, ShieldCheck } from "lucide-react";
 import { LoadingState } from "@/components/common/LoadingState";
-import { Button } from "@/components/ui/Button";
-import { useCandidateProfile, useCandidateSkills } from "@/hooks/useCandidateProfile";
+import {
+  useCandidatePreferences,
+  useCandidateProfile,
+  useCandidateSkills,
+} from "@/hooks/useCandidateProfile";
 import { useSystemLiveness, useSystemReadiness } from "@/hooks/useSystemHealth";
 import { usePipelineRuns } from "@/hooks/usePipelineRuns";
+import { useJobs } from "@/hooks/useJobs";
+import { useMatches } from "@/hooks/useMatches";
+import { calculateProfileCompletion } from "@/features/candidate/utils/profileCompletion";
+import { TriggerRunModal } from "@/features/pipeline/components/TriggerRunModal";
+import { PipelineRunDetailModal } from "@/features/pipeline/components/PipelineRunDetailModal";
+import { DashboardGreeting } from "../components/DashboardGreeting";
+import { DashboardMetricsOverview } from "../components/DashboardMetricsOverview";
+import { RecentJobsCard } from "../components/RecentJobsCard";
+import { RecentMatchesCard } from "../components/RecentMatchesCard";
 import { CandidateSummaryCard } from "../components/CandidateSummaryCard";
 import { SystemReadinessCard } from "../components/SystemReadinessCard";
 import { PipelineActivityCard } from "../components/PipelineActivityCard";
 
 export function DashboardPage() {
+  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+
   const { data: profile, isLoading: isProfileLoading } = useCandidateProfile();
+  const { data: preferences } = useCandidatePreferences();
   const { data: skills } = useCandidateSkills();
   const { data: readiness, isLoading: isReadinessLoading } = useSystemReadiness();
   const { data: liveness } = useSystemLiveness();
-  const { data: runsResponse, isLoading: isRunsLoading } = usePipelineRuns({ page_size: 1 });
+
+  const {
+    data: runsResponse,
+    isLoading: isRunsLoading,
+    refetch: refetchRuns,
+  } = usePipelineRuns({ page_size: 5 });
+
+  const { data: jobsResponse } = useJobs({ page_size: 5 });
+  const { data: matchesResponse } = useMatches({ page_size: 5 });
 
   const isLoading = isProfileLoading && isReadinessLoading && isRunsLoading;
-  const latestRun = runsResponse?.items?.[0] || null;
+
+  const runs = runsResponse?.items || [];
+  const latestRun = runs[0] || null;
   const totalRuns = runsResponse?.pagination?.total_items || 0;
+  const totalJobs = jobsResponse?.pagination?.total_items || 0;
+  const totalMatches = matchesResponse?.pagination?.total_items || 0;
+  const hasActiveRun = runs.some((r) => r.status === "PENDING" || r.status === "RUNNING");
+
+  const { score: readinessScore } = calculateProfileCompletion(profile, preferences, skills);
 
   if (isLoading) {
-    return <LoadingState message="Connecting to JobRadar AI workspace..." />;
+    return <LoadingState message="Connecting to JobRadar AI intelligence workspace..." />;
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Intelligence Dashboard"
-        description="Unified workspace overview connecting candidate evidence, active pipeline runs, and infrastructure telemetry"
-        breadcrumbs={[]}
-        actions={
-          <div className="flex items-center gap-2">
-            <Link to="/pipeline">
-              <Button variant="primary" size="sm" className="gap-1.5 shadow-xs">
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Trigger Pipeline Run</span>
-              </Button>
-            </Link>
-          </div>
-        }
+      {/* 1. Personalized Greeting & Fast Action Console */}
+      <DashboardGreeting
+        profile={profile}
+        onTriggerRun={() => setIsTriggerModalOpen(true)}
       />
 
-      {/* Main 3-Column Telemetry Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CandidateSummaryCard
-          profile={profile}
-          skillsCount={skills?.length || 0}
-        />
+      {/* 2. Top-Level Operational Metrics Overview */}
+      <DashboardMetricsOverview
+        totalJobs={totalJobs}
+        totalMatches={totalMatches}
+        readinessScore={readinessScore}
+        totalRuns={totalRuns}
+        hasActiveRun={hasActiveRun}
+      />
 
-        <PipelineActivityCard
-          latestRun={latestRun}
-          totalRunsCount={totalRuns}
-        />
+      {/* 3. Main Dashboard Intelligence & Pipeline Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Job Discoveries & Scored Matches (7 cols on lg) */}
+        <div className="lg:col-span-7 space-y-6">
+          <RecentMatchesCard />
+          <RecentJobsCard />
+        </div>
 
-        <SystemReadinessCard
-          readiness={readiness}
-          liveness={liveness}
-          isLoading={isReadinessLoading}
-        />
+        {/* Right Column: Candidate Evidence & Infrastructure Telemetry (5 cols on lg) */}
+        <div className="lg:col-span-5 space-y-6">
+          <CandidateSummaryCard
+            profile={profile}
+            skillsCount={skills?.length || 0}
+          />
+
+          <PipelineActivityCard
+            latestRun={latestRun}
+            totalRunsCount={totalRuns}
+            recentRuns={runs}
+            onSelectRun={(runId) => setSelectedRunId(runId)}
+            onTriggerRun={() => setIsTriggerModalOpen(true)}
+          />
+
+          <SystemReadinessCard
+            readiness={readiness}
+            liveness={liveness}
+            isLoading={isReadinessLoading}
+          />
+        </div>
       </div>
 
-      {/* Architectural Invariants & Navigation Quick Links */}
+      {/* 4. Architectural Invariants & Navigation Quick Links */}
       <div className="rounded-card border border-terminal-warmBorder bg-terminal-warmSurface p-6 shadow-card">
         <h3 className="text-sm font-bold font-display text-terminal-dark mb-2 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-terminal-primary" />
@@ -103,7 +145,27 @@ export function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Trigger Run Modal */}
+      {isTriggerModalOpen && profile && (
+        <TriggerRunModal
+          candidateProfileId={profile.id}
+          onClose={() => setIsTriggerModalOpen(false)}
+          onSuccess={(runId) => {
+            setIsTriggerModalOpen(false);
+            setSelectedRunId(runId);
+            refetchRuns();
+          }}
+        />
+      )}
+
+      {/* Pipeline Detail Modal */}
+      {selectedRunId && (
+        <PipelineRunDetailModal
+          runId={selectedRunId}
+          onClose={() => setSelectedRunId(null)}
+        />
+      )}
     </div>
   );
 }
-
