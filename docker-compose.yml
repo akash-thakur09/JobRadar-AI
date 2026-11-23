@@ -1,3 +1,30 @@
+x-runtime: &runtime
+  APP_ENV: ${APP_ENV:-production}
+  DEBUG: ${DEBUG:-false}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/jobradar_ai}
+  DATABASE_SYNC_URL: ${DATABASE_SYNC_URL:-postgresql+psycopg://postgres:postgres@postgres:5432/jobradar_ai}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+  STORAGE_DIR: /app/storage
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  OLLAMA_MODEL: ${OLLAMA_MODEL:-${OLLAMA_MODEL_NAME:-llama3.1:8b}}
+  LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+  LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-30}
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+  SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-${SMTP_SENDER_EMAIL:-noreply@jobradar.ai}}
+  SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+  NOTIFICATION_RECIPIENT_EMAIL: ${NOTIFICATION_RECIPIENT_EMAIL:-}
+  PIPELINE_SCHEDULER_ENABLED: ${PIPELINE_SCHEDULER_ENABLED:-false}
+  PIPELINE_DISCOVERY_INTERVAL_HOURS: ${PIPELINE_DISCOVERY_INTERVAL_HOURS:-6}
+  CAREER_PAGE_ALLOWED_HOSTS: ${CAREER_PAGE_ALLOWED_HOSTS:-}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173}
+
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -12,7 +39,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d jobradar_ai"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-jobradar_ai}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -23,7 +50,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -38,16 +65,17 @@ services:
       dockerfile: Dockerfile
     container_name: jobradar_backend
     restart: unless-stopped
-    environment:
-      APP_ENV: development
-      DEBUG: "true"
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/jobradar_ai
-      DATABASE_SYNC_URL: postgresql+psycopg://postgres:postgres@postgres:5432/jobradar_ai
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    environment: *runtime
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - storage_data:/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,14 +91,9 @@ services:
     container_name: jobradar_worker
     restart: unless-stopped
     command: celery -A app.workers.celery_app worker -l INFO -Q discovery,processing,tailoring,notifications
-    environment:
-      APP_ENV: development
-      DEBUG: "true"
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/jobradar_ai
-      DATABASE_SYNC_URL: postgresql+psycopg://postgres:postgres@postgres:5432/jobradar_ai
-      REDIS_URL: redis://redis:6379/0
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    environment: *runtime
+    volumes:
+      - storage_data:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,8 +102,42 @@ services:
     profiles:
       - full
 
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jobradar_beat
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat -l INFO
+    environment: *runtime
+    volumes:
+      - storage_data:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - full
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jobradar_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    profiles:
+      - full
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  storage_data:
     driver: local

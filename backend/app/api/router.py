@@ -10,6 +10,7 @@ from app.api.routes.matches import matches_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.pipeline import router as pipeline_router
 from app.api.routes.resumes import router as resumes_router
+from app.api.routes.settings import router as settings_router
 from app.api.routes.tailored_resumes import router as tailored_resumes_router
 
 api_v1_router = APIRouter()
@@ -40,3 +41,4 @@ api_v1_router.include_router(notifications_router)
 
 # Register pipeline orchestration and scheduling routes (Milestone 10)
 api_v1_router.include_router(pipeline_router)
+api_v1_router.include_router(settings_router)

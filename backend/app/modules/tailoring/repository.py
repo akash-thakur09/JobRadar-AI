@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.modules.candidate.models import CandidateProfile
 from app.modules.tailoring.enums import RenderingStrategyEnum, TailoredResumeStatusEnum
 from app.modules.tailoring.models import TailoredResume
 
@@ -23,7 +24,7 @@ class TailoringRepository:
         stmt = select(TailoredResume).where(TailoredResume.id == tailored_resume_id)
         if load_relations:
             stmt = stmt.options(
-                selectinload(TailoredResume.candidate_profile),
+                selectinload(TailoredResume.candidate_profile).selectinload(CandidateProfile.skills),
                 selectinload(TailoredResume.job),
                 selectinload(TailoredResume.job_match),
                 selectinload(TailoredResume.resume_version),
@@ -126,5 +127,5 @@ class TailoringRepository:
     async def save(self, session: AsyncSession, tailored_resume: TailoredResume) -> TailoredResume:
         """Save updates to a tailored resume record."""
         await session.flush()
-        await session.refresh(tailored_resume)
+        await session.refresh(tailored_resume, attribute_names=["updated_at"])
         return tailored_resume

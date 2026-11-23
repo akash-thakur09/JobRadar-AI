@@ -238,6 +238,10 @@ curl -s http://localhost:8000/api/v1/resumes/<RESUME_UUID>/content
 
 The Discovery module exposes RESTful endpoints under `/api/v1/discovery` to manage configured ATS job boards, company career portals, and execute background discovery runs.
 
+Open **Settings → Career page sources** to register and run an approved company page. Set `CAREER_PAGE_ALLOWED_HOSTS` to the exact public hostnames you have permission to query. Use the final HTTPS URL for a page with [JobPosting structured data](https://schema.org/JobPosting), or supply a job-link path such as `/careers/jobs/` for a page that lists individual job links. Discovery requests the configured page only and imports matching links or structured postings from that page.
+
+**Settings** also lets you verify the browser's API proxy path, select the installed Ollama model and request timeout, configure scheduling, and set the notification recipient and SMTP relay. Saved server options override environment defaults and are shared with workers through `STORAGE_DIR`. The SMTP check verifies the connection and configured authentication without sending a message. Protect the Settings page and the storage volume with the same access controls as the rest of the application.
+
 ### 1. Register a Job Source
 Registers an external job source (Greenhouse, Lever, or Career Page). Enforces source-specific configuration validation.
 

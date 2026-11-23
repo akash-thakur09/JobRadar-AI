@@ -2,12 +2,14 @@
 
 from app.modules.discovery.models import JobSourceTypeEnum
 from app.modules.jobs.normalizers.base import BaseJobNormalizer
+from app.modules.jobs.normalizers.career_page import CareerPageNormalizer
 from app.modules.jobs.normalizers.greenhouse import GreenhouseNormalizer
 from app.modules.jobs.normalizers.lever import LeverNormalizer
 
 _NORMALIZERS: dict[JobSourceTypeEnum, BaseJobNormalizer] = {
     JobSourceTypeEnum.GREENHOUSE: GreenhouseNormalizer(),
     JobSourceTypeEnum.LEVER: LeverNormalizer(),
+    JobSourceTypeEnum.CAREER_PAGE: CareerPageNormalizer(),
 }
 
 

@@ -13,6 +13,7 @@ import app.modules.jobs.models  # noqa: F401
 import app.modules.matching.models  # noqa: F401
 import app.modules.notifications.models  # noqa: F401
 import app.modules.pipeline.models  # noqa: F401
+import app.modules.resumes.models  # noqa: F401
 import app.modules.tailoring.models  # noqa: F401
 from alembic import context
 from app.core.config import get_settings
@@ -30,7 +31,8 @@ target_metadata = Base.metadata
 
 # Inject database URL dynamically from application settings
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:
@@ -61,7 +63,7 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """Run migrations in 'online' mode using an async engine."""
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = settings.database_url
+    configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url") or settings.database_url
 
     connectable = async_engine_from_config(
         configuration,

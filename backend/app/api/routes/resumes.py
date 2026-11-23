@@ -1,5 +1,9 @@
 """REST API endpoints for Master Resume management and versioning."""
 
+import os
+import re
+import unicodedata
+import urllib.parse
 import uuid
 from typing import Any
 
@@ -199,6 +203,49 @@ async def list_resume_versions(
     return [ResumeVersionResponse.model_validate(v) for v in versions]
 
 
+def format_content_disposition_header(filename: str, disposition: str = "attachment") -> str:
+    """Construct an RFC 6266 and RFC 5987 compliant Content-Disposition header.
+
+    Guarantees:
+    - Safe ASCII-only fallback in `filename="..."` (preventing Latin-1 encoding errors).
+    - Original Unicode filename preserved via UTF-8 percent-encoded `filename*=UTF-8''...`.
+    - Strict stripping of CR, LF, and null bytes to prevent header injection.
+    - Graceful fallback for non-Latin / non-ASCII filenames (e.g., 'resume.pdf').
+    """
+    clean_name = re.sub(r"[\r\n\0]", "", filename or "").strip()
+    if not clean_name:
+        clean_name = "resume"
+
+    encoded_name = urllib.parse.quote(clean_name, safe="!#$&+-.^_`|~", encoding="utf-8")
+
+    clean_stem, clean_ext = os.path.splitext(clean_name)
+    punctuation_map = {
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2026": "...",
+    }
+    for u_char, a_char in punctuation_map.items():
+        clean_stem = clean_stem.replace(u_char, a_char)
+
+    ascii_stem = (
+        unicodedata.normalize("NFKD", clean_stem)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    ascii_stem = re.sub(r'[\r\n\0"\\\x00-\x1f\x7f]', "_", ascii_stem).strip()
+    if not ascii_stem or ascii_stem.replace("_", "") == "":
+        ascii_stem = "resume"
+
+    ascii_ext = "".join(c for c in clean_ext if 0x20 <= ord(c) <= 0x7E and c not in '"\\').strip()
+    ascii_fallback = f"{ascii_stem}{ascii_ext}"
+
+    return f'{disposition}; filename="{ascii_fallback}"; filename*=UTF-8\'\'{encoded_name}'
+
+
 @router.get(
     "/{resume_id}/download",
     status_code=status.HTTP_200_OK,
@@ -215,7 +262,7 @@ async def download_resume(
     return Response(
         content=content_bytes,
         media_type=mime_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": format_content_disposition_header(filename)},
     )
 
 

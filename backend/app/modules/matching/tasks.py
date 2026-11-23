@@ -1,6 +1,5 @@
 """Celery asynchronous background tasks for Candidate-Job Matching and Scoring."""
 
-import asyncio
 import uuid
 from typing import Any
 
@@ -12,6 +11,7 @@ from app.infrastructure.redis import get_redis
 from app.modules.matching.models import SemanticAnalysisStatusEnum
 from app.modules.matching.semantic_service import get_semantic_service
 from app.modules.matching.service import get_matching_service
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = get_task_logger(__name__)
@@ -29,7 +29,7 @@ def evaluate_job_matching_task(
     self: Task, job_id: str, candidate_profile_id: str | None = None
 ) -> dict[str, Any]:
     """Execute Layer 1 Eligibility and Layer 2 Scoring for a canonical job."""
-    return asyncio.run(_async_evaluate_job_matching(self, job_id, candidate_profile_id))
+    return run_async_task(_async_evaluate_job_matching(self, job_id, candidate_profile_id))
 
 
 @celery_app.task(
@@ -42,7 +42,7 @@ def evaluate_job_matching_task(
 )
 def evaluate_semantic_matching_task(self: Task, match_id: str) -> dict[str, Any]:
     """Execute Layer 3 LLM Semantic Analysis for a qualified candidate-job match."""
-    return asyncio.run(_async_evaluate_semantic_matching(self, match_id))
+    return run_async_task(_async_evaluate_semantic_matching(self, match_id))
 
 
 @celery_app.task(
@@ -55,7 +55,7 @@ def evaluate_pending_job_matches_task(
     batch_size: int = 100, candidate_profile_id: str | None = None
 ) -> dict[str, Any]:
     """Batch evaluate unmatched canonical jobs for a candidate."""
-    return asyncio.run(_async_evaluate_pending_matches(batch_size, candidate_profile_id))
+    return run_async_task(_async_evaluate_pending_matches(batch_size, candidate_profile_id))
 
 
 async def _async_evaluate_job_matching(

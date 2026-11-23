@@ -145,6 +145,7 @@ async def test_smtp_email_provider_ping():
     provider = SmtpEmailProvider(host="smtp.example.com", port=25)
     mock_smtp_instance = MagicMock()
     mock_smtp_instance.__enter__.return_value = mock_smtp_instance
+    mock_smtp_instance.noop.return_value = (250, b"OK")
 
     with patch("smtplib.SMTP", return_value=mock_smtp_instance):
         assert await provider.ping() is True

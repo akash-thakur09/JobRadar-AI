@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
@@ -35,7 +35,6 @@ def get_async_engine() -> AsyncEngine:
             _async_engine = create_async_engine(
                 settings.database_url,
                 echo=settings.debug and not settings.is_production,
-                poolclass=QueuePool,
                 pool_size=settings.database_pool_size,
                 max_overflow=settings.database_max_overflow,
                 pool_timeout=settings.database_pool_timeout,
@@ -68,11 +67,11 @@ async def init_db() -> None:
 async def close_db() -> None:
     """Dispose of the database engine and connection pool on shutdown."""
     global _async_engine, _async_session_factory
-    if _async_engine is not None:
+    engine = _async_engine
+    _async_engine, _async_session_factory = None, None
+    if engine is not None:
         logger.info("Closing PostgreSQL database engine and active connections...")
-        await _async_engine.dispose()
-        _async_engine = None
-        _async_session_factory = None
+        await engine.dispose()
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

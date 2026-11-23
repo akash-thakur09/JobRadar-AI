@@ -1,4 +1,4 @@
-import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
+import { useEffect, useState, useRef, type DragEvent, type ChangeEvent, type KeyboardEvent } from "react";
 import { UploadCloud, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
@@ -25,8 +25,21 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const browseRef = useRef<HTMLButtonElement>(null);
 
   const uploadMutation = useUploadResume();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement;
+    browseRef.current?.focus();
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -88,6 +101,29 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
     onClose();
   };
 
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape" && !uploadMutation.isPending) {
+      event.preventDefault();
+      handleClose();
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)");
+    if (!focusable?.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedFile) return;
     try {
@@ -104,10 +140,12 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-terminal-dark/70 backdrop-blur-xs p-4">
       <div
+        ref={dialogRef}
         className="w-full max-w-lg bg-terminal-warmSurface border border-terminal-warmBorder rounded-card shadow-2xl overflow-hidden"
         role="dialog"
         aria-modal="true"
         aria-labelledby="upload-modal-title"
+        onKeyDown={handleDialogKeyDown}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-terminal-warmBorder">
@@ -120,7 +158,9 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
             </p>
           </div>
           <button
+            type="button"
             onClick={handleClose}
+            disabled={uploadMutation.isPending}
             className="p-1 rounded text-terminal-muted hover:text-terminal-dark hover:bg-terminal-warm transition-colors"
             aria-label="Close dialog"
           >
@@ -135,8 +175,7 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-card p-6 flex flex-col items-center justify-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-card p-6 flex flex-col items-center justify-center transition-colors ${
               isDragOver
                 ? "border-terminal-primary bg-terminal-primary/5"
                 : "border-terminal-warmBorder hover:border-terminal-muted bg-terminal-warm/30"
@@ -152,11 +191,18 @@ export function ResumeUploadModal({ isOpen, onClose, onSuccess }: ResumeUploadMo
             <div className="w-12 h-12 rounded-full bg-terminal-warm flex items-center justify-center text-terminal-muted mb-3 border border-terminal-warmBorder">
               <UploadCloud className="w-6 h-6 text-terminal-primary" />
             </div>
-            <p className="text-sm font-semibold font-display text-terminal-dark">
-              Click to browse or drag & drop your resume file
-            </p>
+            <Button
+              ref={browseRef}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={uploadMutation.isPending}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Browse files
+            </Button>
             <p className="text-xs text-terminal-muted mt-1 font-mono">
-              Supported formats: PDF, DOCX (Max 10MB)
+              Or drop a PDF or DOCX file up to 10 MB.
             </p>
           </div>
 

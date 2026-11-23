@@ -1,10 +1,11 @@
 """Application configuration module using Pydantic Settings."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BeforeValidator, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, BeforeValidator, Field
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 def _parse_cors_origins(v: str | list[str]) -> list[str]:
@@ -25,7 +26,9 @@ def _parse_cors_origins(v: str | list[str]) -> list[str]:
     return v
 
 
-CorsOrigins = Annotated[list[str], BeforeValidator(_parse_cors_origins)]
+DelimitedList = Annotated[list[str], NoDecode, BeforeValidator(_parse_cors_origins)]
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -50,10 +53,11 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/api/v1", description="API v1 routing prefix")
 
     # Security & CORS
-    cors_origins: CorsOrigins = Field(
+    cors_origins: DelimitedList = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
         description="Allowed CORS origins",
     )
+    career_page_allowed_hosts: DelimitedList = Field(default_factory=list)
 
     # PostgreSQL Relational Database
     database_url: str = Field(
@@ -95,6 +99,7 @@ class Settings(BaseSettings):
     )
     ollama_model: str = Field(
         default="llama3.1:8b",
+        validation_alias=AliasChoices("ollama_model", "OLLAMA_MODEL_NAME"),
         description="Default local LLM model name",
     )
     llm_timeout_seconds: float = Field(
@@ -116,8 +121,9 @@ class Settings(BaseSettings):
 
     # Local File Storage
     storage_dir: str = Field(
-        default="storage",
-        description="Root directory for local file storage",
+        default=str(PROJECT_ROOT / "storage"),
+        validation_alias=AliasChoices("storage_dir", "STORAGE_LOCAL_BASE_DIR"),
+        description="Absolute root directory for local file storage",
     )
 
     # Email Notification & Delivery (Milestone 9)
@@ -132,6 +138,7 @@ class Settings(BaseSettings):
     smtp_password: str = Field(default="", description="SMTP password")
     smtp_from_email: str = Field(
         default="notifications@jobradar.ai",
+        validation_alias=AliasChoices("smtp_from_email", "SMTP_SENDER_EMAIL"),
         description="Outbound sender email address",
     )
     smtp_from_name: str = Field(
@@ -143,6 +150,7 @@ class Settings(BaseSettings):
         default=15.0,
         description="SMTP connection and socket timeout in seconds",
     )
+    notification_recipient_email: str = Field(default="", description="Recipient for the default candidate")
     email_max_retries: int = Field(
         default=3,
         description="Maximum retry attempts for transient email failures",

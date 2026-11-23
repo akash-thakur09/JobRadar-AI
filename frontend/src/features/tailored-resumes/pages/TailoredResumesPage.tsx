@@ -1,3 +1,4 @@
+import { readPageParam } from "@/lib/utils";
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -23,7 +24,7 @@ const PAGE_SIZE = 10;
 export function TailoredResumesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = readPageParam(searchParams.get("page"));
   const statusFilter = searchParams.get("status") || "ALL";
 
   const { data: response, isLoading, error, refetch } = useTailoredResumes({

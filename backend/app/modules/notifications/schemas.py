@@ -55,7 +55,7 @@ class NotificationRetryRequest(BaseModel):
 
     force: bool = Field(
         default=False,
-        description="Whether to override attempt count boundaries if permitted by administrative rules",
+        description="Permit one additional delivery attempt after the attempt limit is exhausted",
     )
 
 

@@ -11,13 +11,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libpangocairo-1.0-0 \
+    libglib2.0-0 \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md* /app/
+COPY pyproject.toml /app/
+COPY app /app/app
 
 RUN pip install --no-cache-dir -e ".[dev]"
 
-COPY . /app/
+COPY alembic.ini /app/
+COPY alembic /app/alembic
+RUN mkdir -p /app/storage
 
 EXPOSE 8000
 

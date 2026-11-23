@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { ResumeCard } from "../components/ResumeCard";
 import { ResumeUploadModal } from "../components/ResumeUploadModal";
-import { formatDate } from "@/lib/utils";
+import { formatDate, readPageParam } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -27,7 +27,7 @@ export function ResumesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = readPageParam(searchParams.get("page"));
 
   const { data: resumesResponse, isLoading, error, refetch } = useResumes({
     page,

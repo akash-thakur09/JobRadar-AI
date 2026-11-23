@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resumesService } from "@/services/resumes.service";
+import type { ResumeProcessingStatus } from "@/types/resumes";
+
+export function isResumeParsing(status?: ResumeProcessingStatus) {
+  return status === "PENDING" || status === "PROCESSING";
+}
 
 export const resumeKeys = {
   all: ["resumes"] as const,
@@ -16,6 +21,10 @@ export function useResumes(params?: { page?: number; page_size?: number }) {
   return useQuery({
     queryKey: resumeKeys.list(params),
     queryFn: () => resumesService.listResumes(params),
+    refetchInterval: (query) =>
+      query.state.data?.items.some((resume) => isResumeParsing(resume.latest_version?.processing_status))
+        ? 2000
+        : false,
   });
 }
 
@@ -24,14 +33,16 @@ export function useResume(resumeId: string) {
     queryKey: resumeKeys.detail(resumeId),
     queryFn: () => resumesService.getResume(resumeId),
     enabled: Boolean(resumeId),
+    refetchInterval: (query) =>
+      isResumeParsing(query.state.data?.active_version?.processing_status) ? 2000 : false,
   });
 }
 
-export function useResumeContent(resumeId: string) {
+export function useResumeContent(resumeId: string, ready = true) {
   return useQuery({
     queryKey: resumeKeys.content(resumeId),
     queryFn: () => resumesService.getResumeContent(resumeId),
-    enabled: Boolean(resumeId),
+    enabled: Boolean(resumeId) && ready,
   });
 }
 
@@ -40,6 +51,8 @@ export function useResumeVersions(resumeId: string) {
     queryKey: resumeKeys.versions(resumeId),
     queryFn: () => resumesService.listResumeVersions(resumeId),
     enabled: Boolean(resumeId),
+    refetchInterval: (query) =>
+      query.state.data?.some((version) => isResumeParsing(version.processing_status)) ? 2000 : false,
   });
 }
 

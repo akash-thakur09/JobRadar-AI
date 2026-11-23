@@ -10,7 +10,7 @@ from app.modules.pipeline.scheduler import StandalonePipelineScheduler
 @pytest.mark.unit
 def test_scheduler_enabled_flag_reflects_settings() -> None:
     """StandalonePipelineScheduler.is_enabled reflects application configuration."""
-    with patch("app.modules.pipeline.scheduler.get_settings") as mock_settings:
+    with patch("app.modules.pipeline.scheduler.get_runtime_settings") as mock_settings:
         mock_settings.return_value.pipeline_scheduler_enabled = False
         scheduler = StandalonePipelineScheduler()
         assert scheduler.is_enabled is False
