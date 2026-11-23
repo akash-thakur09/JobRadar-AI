@@ -77,3 +77,7 @@ class JobSourceAdapter(ABC):
             MalformedPayloadError: On invalid response structure.
         """
         ...
+
+    def validate_source(self, base_url: str, configuration: dict[str, Any]) -> None:  # noqa: ARG002
+        """Validate adapter-specific configuration and its configured endpoint."""
+        self.validate_configuration(configuration)

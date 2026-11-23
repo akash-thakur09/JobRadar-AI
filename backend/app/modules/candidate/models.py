@@ -4,6 +4,10 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.modules.matching.models import JobMatch
 
 from sqlalchemy import (
     Boolean,
@@ -151,6 +155,11 @@ class CandidateProfile(Base, TimestampMixin):
         back_populates="candidate_profile",
         cascade="all, delete-orphan",
         lazy="selectin",
+    )
+    matches: Mapped[list["JobMatch"]] = relationship(
+        "JobMatch",
+        back_populates="candidate_profile",
+        cascade="all, delete-orphan",
     )
 
 

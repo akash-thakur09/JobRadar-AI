@@ -1,6 +1,5 @@
 """Celery asynchronous background tasks for Job Discovery."""
 
-import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -12,10 +11,12 @@ from app.database.session import get_session_factory
 from app.modules.discovery.adapters.registry import get_adapter_for_source_type
 from app.modules.discovery.exceptions import (
     NonRetryableDiscoveryError,
+    RateLimitExceededError,
     RetryableDiscoveryError,
 )
 from app.modules.discovery.models import DiscoveryRunStatusEnum
 from app.modules.discovery.repository import DiscoveryRepository
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = get_task_logger(__name__)
@@ -29,23 +30,24 @@ logger = get_task_logger(__name__)
     soft_time_limit=300,
     time_limit=360,
 )
-def discover_source_jobs_task(self: Task, source_id: str) -> dict[str, Any]:
+def discover_source_jobs_task(self: Task, source_id: str, run_id: str | None = None) -> dict[str, Any]:
     """Execute asynchronous discovery run for a specific job source."""
-    return asyncio.run(_async_discover_source_jobs(self, source_id))
+    return run_async_task(_async_discover_source_jobs(self, source_id, run_id))
 
 
-async def _async_discover_source_jobs(task: Task, source_id_str: str) -> dict[str, Any]:
+async def _async_discover_source_jobs(
+    task: Task, source_id_str: str, run_id_str: str | None = None
+) -> dict[str, Any]:
     """Internal async coordinator for job source discovery execution."""
     session_factory = get_session_factory()
     repo = DiscoveryRepository()
 
     try:
         source_uuid = uuid.UUID(source_id_str)
+        run_id = uuid.UUID(run_id_str) if run_id_str else None
     except ValueError:
         logger.error(f"Invalid UUID string provided for source_id: {source_id_str}")
         return {"status": "FAILED", "reason": "invalid_uuid"}
-
-    run_id: uuid.UUID | None = None
 
     async with session_factory() as session:
         source = await repo.get_source_by_id(session, source_uuid)
@@ -53,16 +55,32 @@ async def _async_discover_source_jobs(task: Task, source_id_str: str) -> dict[st
             logger.warning(f"JobSource '{source_uuid}' not found. Aborting discovery.")
             return {"status": "FAILED", "reason": "source_not_found"}
 
+        run = None
+        if run_id is not None:
+            run = await repo.get_discovery_run_by_id(session, run_id, for_update=True)
+            if run is None or run.job_source_id != source_uuid:
+                return {"status": "FAILED", "reason": "run_not_found"}
+            if run.status != DiscoveryRunStatusEnum.PENDING:
+                return {"status": run.status.value, "run_id": str(run.id)}
+
         if not source.is_enabled:
             logger.info(f"JobSource '{source.name}' ({source.id}) is disabled. Skipping discovery.")
+            if run is not None:
+                run.status = DiscoveryRunStatusEnum.FAILED
+                run.completed_at = datetime.now(UTC)
+                run.error_summary = "Job source was disabled before the run started."
+                await session.commit()
             return {"status": "SKIPPED", "reason": "source_disabled"}
 
-        # Create discovery execution record
-        run = await repo.create_discovery_run(
-            session=session,
-            job_source_id=source.id,
-            status=DiscoveryRunStatusEnum.RUNNING,
-        )
+        if run is None:
+            run = await repo.create_discovery_run(
+                session=session,
+                job_source_id=source.id,
+                status=DiscoveryRunStatusEnum.RUNNING,
+            )
+        else:
+            run.status = DiscoveryRunStatusEnum.RUNNING
+            run.started_at = datetime.now(UTC)
         await session.commit()
         run_id = run.id
         source_name = source.name
@@ -127,35 +145,39 @@ async def _async_discover_source_jobs(task: Task, source_id_str: str) -> dict[st
 
     except RetryableDiscoveryError as exc:
         logger.warning(f"Retryable error during discovery run {run_id} for '{source_name}': {exc}")
-        if run_id is not None:
-            await _record_run_failure(run_id, str(exc))
-
-        # Exponential backoff retry: 30s, 60s, 120s
-        retry_delay = 30 * (2**task.request.retries)
-        raise task.retry(exc=exc, countdown=retry_delay) from exc
+        delay = 30 * (2**task.request.retries)
+        if isinstance(exc, RateLimitExceededError) and exc.retry_after:
+            delay = max(delay, exc.retry_after)
+        return await _retry_or_fail(task, source_id_str, run_id, exc, delay)
 
     except (NonRetryableDiscoveryError, ValueError) as exc:
         logger.error(
             f"Non-retryable configuration or payload failure in run {run_id} for '{source_name}': {exc}"
         )
-        if run_id is not None:
-            await _record_run_failure(run_id, str(exc))
+        await _record_run_failure(run_id, str(exc))
         return {"status": "FAILED", "run_id": str(run_id), "error": str(exc)}
 
     except Exception as exc:
         logger.exception(
             f"Unexpected unhandled error during discovery run {run_id} for '{source_name}': {exc}"
         )
-        if run_id is not None:
-            await _record_run_failure(run_id, f"Unhandled exception: {exc}")
-
-        if task.request.retries < 2:
-            raise task.retry(exc=exc, countdown=60) from exc
-        return {"status": "FAILED", "run_id": str(run_id), "error": str(exc)}
+        return await _retry_or_fail(task, source_id_str, run_id, exc, 60)
 
 
-async def _record_run_failure(run_id: uuid.UUID, error_message: str) -> None:
-    """Helper to record failed status and diagnostic summary on a discovery run."""
+async def _retry_or_fail(
+    task: Task, source_id: str, run_id: uuid.UUID, exc: Exception, delay: int
+) -> dict[str, Any]:
+    retrying = task.max_retries is None or task.request.retries < task.max_retries
+    await _record_run_failure(run_id, str(exc), retrying=retrying)
+    if retrying:
+        raise task.retry(args=(source_id, str(run_id)), exc=exc, countdown=delay) from exc
+    return {"status": "FAILED", "run_id": str(run_id), "error": str(exc)}
+
+
+async def _record_run_failure(
+    run_id: uuid.UUID, error_message: str, *, retrying: bool = False
+) -> None:
+    """Record failure diagnostics while keeping a scheduled retry eligible to run."""
     session_factory = get_session_factory()
     repo = DiscoveryRepository()
     try:
@@ -166,8 +188,8 @@ async def _record_run_failure(run_id: uuid.UUID, error_message: str) -> None:
                     session=session,
                     run=run_obj,
                     update_data={
-                        "status": DiscoveryRunStatusEnum.FAILED,
-                        "completed_at": datetime.now(UTC),
+                        "status": DiscoveryRunStatusEnum.PENDING if retrying else DiscoveryRunStatusEnum.FAILED,
+                        "completed_at": None if retrying else datetime.now(UTC),
                         "error_summary": error_message[:2000],
                     },
                 )

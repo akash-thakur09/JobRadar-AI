@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.candidate.models import (
@@ -32,66 +33,57 @@ class CandidateRepository:
         """Retrieve the primary candidate profile or bootstrap a default singleton."""
         # Ensure default user exists
         user = await self.get_default_user(session)
-        if user is None:
-            user = User(
-                email=DEFAULT_CANDIDATE_EMAIL,
-                is_active=True,
+        if user is not None:
+            profile = await self._get_profile_for_user(session, user.id)
+            if profile is not None and await self.get_preferences_by_profile_id(session, profile.id):
+                return profile
+        else:
+            await session.execute(
+                insert(User)
+                .values(email=DEFAULT_CANDIDATE_EMAIL, is_active=True)
+                .on_conflict_do_nothing(index_elements=[User.email])
             )
-            session.add(user)
+
+        # Serialize initial creation and repair of partially initialized profiles.
+        user = (
+            await session.execute(
+                select(User).where(User.email == DEFAULT_CANDIDATE_EMAIL).with_for_update()
+            )
+        ).scalar_one()
+        profile = await self._get_profile_for_user(session, user.id)
+        if profile is None:
+            profile = CandidateProfile(
+                user_id=user.id,
+                full_name="Primary Candidate",
+                headline="Software Engineer",
+                total_experience_months=0,
+            )
+            session.add(profile)
             await session.flush()
+            await session.refresh(profile)
 
-        stmt = select(CandidateProfile).where(CandidateProfile.user_id == user.id)
-        result = await session.execute(stmt)
-        profile = result.scalar_one_or_none()
-
-        if profile is not None:
-            # Ensure preferences exist if not present
-            pref = await self.get_preferences_by_profile_id(session, profile.id)
-            if pref is None:
-                pref = CandidatePreference(
+        if await self.get_preferences_by_profile_id(session, profile.id) is None:
+            session.add(
+                CandidatePreference(
                     candidate_profile_id=profile.id,
                     minimum_relevance_score=Decimal("70.00"),
                     preferred_titles=[],
-                    preferred_workplace_types=[
-                        WorkplaceTypeEnum.REMOTE,
-                        WorkplaceTypeEnum.HYBRID,
-                    ],
+                    preferred_workplace_types=[WorkplaceTypeEnum.REMOTE, WorkplaceTypeEnum.HYBRID],
                     preferred_locations=[],
                     preferred_employment_types=[EmploymentTypeEnum.FULL_TIME],
                     max_job_age_days=14,
                 )
-                session.add(pref)
-                await session.flush()
-            return profile
-
-        # Bootstrap candidate profile
-        profile = CandidateProfile(
-            user_id=user.id,
-            full_name="Primary Candidate",
-            headline="Software Engineer",
-            total_experience_months=0,
-        )
-        session.add(profile)
-        await session.flush()
-
-        # Bootstrap matching preferences
-        preferences = CandidatePreference(
-            candidate_profile_id=profile.id,
-            minimum_relevance_score=Decimal("70.00"),
-            preferred_titles=[],
-            preferred_workplace_types=[
-                WorkplaceTypeEnum.REMOTE,
-                WorkplaceTypeEnum.HYBRID,
-            ],
-            preferred_locations=[],
-            preferred_employment_types=[EmploymentTypeEnum.FULL_TIME],
-            max_job_age_days=14,
-        )
-        session.add(preferences)
-        await session.flush()
-        await session.refresh(profile)
-
+            )
+            await session.flush()
         return profile
+
+    async def _get_profile_for_user(
+        self, session: AsyncSession, user_id: uuid.UUID
+    ) -> CandidateProfile | None:
+        result = await session.execute(
+            select(CandidateProfile).where(CandidateProfile.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
 
     async def get_profile(
         self, session: AsyncSession, profile_id: uuid.UUID | None = None

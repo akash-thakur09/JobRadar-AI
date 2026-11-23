@@ -24,6 +24,7 @@ from app.modules.candidate.models import EmploymentTypeEnum, WorkplaceTypeEnum
 
 if TYPE_CHECKING:
     from app.modules.discovery.models import JobSource
+    from app.modules.matching.models import JobMatch
 
 
 class JobStatusEnum(enum.StrEnum):
@@ -122,6 +123,11 @@ class Job(Base, TimestampMixin):
     # Relationships
     source_records: Mapped[list["JobSourceRecord"]] = relationship(
         "JobSourceRecord",
+        back_populates="job",
+        cascade="all, delete-orphan",
+    )
+    matches: Mapped[list["JobMatch"]] = relationship(
+        "JobMatch",
         back_populates="job",
         cascade="all, delete-orphan",
     )

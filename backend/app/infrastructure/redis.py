@@ -46,15 +46,17 @@ async def init_redis() -> None:
 async def close_redis() -> None:
     """Close Redis client and connection pool on shutdown."""
     global _redis_client, _redis_pool
-    if _redis_client is not None:
+    client, pool = _redis_client, _redis_pool
+    _redis_client, _redis_pool = None, None
+    if client is not None:
         logger.info("Closing Redis client...")
-        await _redis_client.aclose()
-        _redis_client = None
-
-    if _redis_pool is not None:
-        logger.info("Disconnecting Redis connection pool...")
-        await _redis_pool.disconnect()
-        _redis_pool = None
+        try:
+            await client.aclose()
+        finally:
+            if pool is not None:
+                await pool.disconnect()
+    elif pool is not None:
+        await pool.disconnect()
 
 
 async def get_redis_client() -> AsyncGenerator[Redis, None]:
@@ -70,8 +72,8 @@ async def check_redis_health(timeout_seconds: float = 3.0) -> tuple[bool, str]:
         tuple[bool, str]: (is_healthy, status_detail)
     """
     try:
-        client = get_redis()
-        response = await asyncio.wait_for(client.ping(), timeout=timeout_seconds)
+        async with Redis.from_url(get_settings().redis_url) as client:
+            response = await asyncio.wait_for(client.ping(), timeout=timeout_seconds)
         if response is True:
             return True, "healthy"
         return False, "Unexpected PING response"

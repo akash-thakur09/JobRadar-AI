@@ -190,7 +190,7 @@ async def test_process_raw_record_handles_failure(
     job_service: JobService, mock_job_repo: AsyncMock
 ) -> None:
     source = _make_source()
-    source.source_type = JobSourceTypeEnum.CAREER_PAGE  # Will trigger ValueError in registry
+    source.source_type = JobSourceTypeEnum.MANUAL_FEED  # Unsupported by the registry
     record = _make_raw_record(source)
 
     mock_job_repo.get_source_record_by_id.return_value = record

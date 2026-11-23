@@ -152,6 +152,20 @@ class JobService:
                     "is_new": existing_job is None,
                 },
             )
+
+            # Trigger matching evaluation for new or revived canonical job
+            if existing_job is None or (
+                existing_job and existing_job.status == JobStatusEnum.ARCHIVED
+            ):
+                try:
+                    from app.modules.matching.tasks import evaluate_job_matching_task
+
+                    evaluate_job_matching_task.delay(str(job.id))
+                except Exception as dispatch_err:
+                    logger.warning(
+                        f"Could not dispatch matching task for job {job.id}: {dispatch_err}"
+                    )
+
             return job
 
         except Exception as exc:

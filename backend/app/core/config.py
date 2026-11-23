@@ -1,10 +1,11 @@
 """Application configuration module using Pydantic Settings."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BeforeValidator, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, BeforeValidator, Field
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 def _parse_cors_origins(v: str | list[str]) -> list[str]:
@@ -25,7 +26,9 @@ def _parse_cors_origins(v: str | list[str]) -> list[str]:
     return v
 
 
-CorsOrigins = Annotated[list[str], BeforeValidator(_parse_cors_origins)]
+DelimitedList = Annotated[list[str], NoDecode, BeforeValidator(_parse_cors_origins)]
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -50,10 +53,11 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/api/v1", description="API v1 routing prefix")
 
     # Security & CORS
-    cors_origins: CorsOrigins = Field(
+    cors_origins: DelimitedList = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"],
         description="Allowed CORS origins",
     )
+    career_page_allowed_hosts: DelimitedList = Field(default_factory=list)
 
     # PostgreSQL Relational Database
     database_url: str = Field(
@@ -84,23 +88,99 @@ class Settings(BaseSettings):
         description="Celery task result backend URL",
     )
 
-    # Future Integrations (Placeholders)
+    # LLM & Semantic Analysis
+    llm_provider: str = Field(
+        default="ollama",
+        description="LLM provider implementation ('ollama', 'mock')",
+    )
     ollama_base_url: str = Field(
         default="http://localhost:11434",
         description="Local Ollama instance base URL",
     )
     ollama_model: str = Field(
         default="llama3.1:8b",
+        validation_alias=AliasChoices("ollama_model", "OLLAMA_MODEL_NAME"),
         description="Default local LLM model name",
     )
+    llm_timeout_seconds: float = Field(
+        default=30.0,
+        description="Timeout for LLM generation in seconds",
+    )
+    llm_max_retries: int = Field(
+        default=2,
+        description="Maximum retries for LLM requests",
+    )
+    llm_temperature: float = Field(
+        default=0.1,
+        description="LLM sampling temperature",
+    )
+    tailoring_max_regeneration_attempts: int = Field(
+        default=2,
+        description="Maximum regeneration attempts on claim validation failure",
+    )
+
+    # Local File Storage
     storage_dir: str = Field(
-        default="storage",
-        description="Root directory for local file storage",
+        default=str(PROJECT_ROOT / "storage"),
+        validation_alias=AliasChoices("storage_dir", "STORAGE_LOCAL_BASE_DIR"),
+        description="Absolute root directory for local file storage",
+    )
+
+    # Email Notification & Delivery (Milestone 9)
+    email_provider: str = Field(
+        default="smtp",
+        description="Email provider implementation ('smtp', 'mock')",
     )
     smtp_host: str = Field(default="localhost", description="Outbound SMTP hostname")
     smtp_port: int = Field(default=1025, description="Outbound SMTP port")
-    smtp_user: str = Field(default="", description="SMTP username")
+    smtp_username: str = Field(default="", description="SMTP username")
+    smtp_user: str = Field(default="", description="Legacy alias for SMTP username")
     smtp_password: str = Field(default="", description="SMTP password")
+    smtp_from_email: str = Field(
+        default="notifications@jobradar.ai",
+        validation_alias=AliasChoices("smtp_from_email", "SMTP_SENDER_EMAIL"),
+        description="Outbound sender email address",
+    )
+    smtp_from_name: str = Field(
+        default="JobRadar AI",
+        description="Outbound sender display name",
+    )
+    smtp_use_tls: bool = Field(default=False, description="Enable TLS/STARTTLS for SMTP connection")
+    smtp_timeout_seconds: float = Field(
+        default=15.0,
+        description="SMTP connection and socket timeout in seconds",
+    )
+    notification_recipient_email: str = Field(default="", description="Recipient for the default candidate")
+    email_max_retries: int = Field(
+        default=3,
+        description="Maximum retry attempts for transient email failures",
+    )
+    pipeline_scheduler_enabled: bool = Field(
+        default=False,
+        description="Whether the automated pipeline scheduler is enabled",
+    )
+    pipeline_discovery_interval_hours: int = Field(
+        default=6,
+        description="Default interval in hours between automated candidate pipeline runs",
+    )
+    pipeline_max_concurrent_runs_per_candidate: int = Field(
+        default=1,
+        description="Maximum concurrent active pipeline runs per candidate profile",
+    )
+    pipeline_lock_ttl_seconds: int = Field(
+        default=600,
+        description="TTL for distributed pipeline execution locks in seconds",
+    )
+
+    email_retry_backoff: float = Field(
+        default=10.0,
+        description="Base retry backoff seconds for email tasks",
+    )
+
+    @property
+    def effective_smtp_username(self) -> str:
+        """Resolve effective SMTP username considering both smtp_username and legacy smtp_user."""
+        return self.smtp_username or self.smtp_user
 
     @property
     def is_production(self) -> bool:

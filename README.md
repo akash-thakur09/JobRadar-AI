@@ -238,6 +238,10 @@ curl -s http://localhost:8000/api/v1/resumes/<RESUME_UUID>/content
 
 The Discovery module exposes RESTful endpoints under `/api/v1/discovery` to manage configured ATS job boards, company career portals, and execute background discovery runs.
 
+Open **Settings → Career page sources** to register and run an approved company page. Set `CAREER_PAGE_ALLOWED_HOSTS` to the exact public hostnames you have permission to query. Use the final HTTPS URL for a page with [JobPosting structured data](https://schema.org/JobPosting), or supply a job-link path such as `/careers/jobs/` for a page that lists individual job links. Discovery requests the configured page only and imports matching links or structured postings from that page.
+
+**Settings** also lets you verify the browser's API proxy path, select the installed Ollama model and request timeout, configure scheduling, and set the notification recipient and SMTP relay. Saved server options override environment defaults and are shared with workers through `STORAGE_DIR`. The SMTP check verifies the connection and configured authentication without sending a message. Protect the Settings page and the storage volume with the same access controls as the rest of the application.
+
 ### 1. Register a Job Source
 Registers an external job source (Greenhouse, Lever, or Career Page). Enforces source-specific configuration validation.
 
@@ -331,7 +335,138 @@ curl -X POST "http://localhost:8000/api/v1/jobs/process-pending?batch_size=100"
 
 ---
 
-## Background Processing & Discovery Architecture
+## Candidate Eligibility & Deterministic Job Matching API Usage
+
+The Matching module provides candidate-specific, deterministic intelligence (Layer 1 boolean eligibility gates and Layer 2 weighted relevance scoring) without LLM latency or cost.
+
+### Matching Engine Architecture
+
+```text
+Candidate Profile + Preferences + Skills + Experience + Canonical Job
+                               ↓
+                 Layer 1 — Deterministic Eligibility
+        (Freshness, Workplace, Location, Experience + 12mo Buffer,
+                Work Authorization, Mandatory Skills)
+                               ↓
+                       Passes Hard Gates?
+                      /                 \
+                    NO                  YES
+                   /                     \
+       Status: ELIGIBILITY_FAILED         Layer 2 — Deterministic Scoring
+       Deterministic Score: 0.00          - Skill Coverage: 40 pts
+       (Qualification halts)              - Experience Alignment: 20 pts
+                                          - Role Title Relevance: 15 pts
+                                          - Workplace / Location Match: 15 pts
+                                          - Bonus Factors: 10 pts
+                                                   ↓
+                                        Relevance Score (0 - 100)
+                                        ├── Score >= 50.00: is_qualified = True
+                                        └── Score < 50.00: is_qualified = False
+                                        (Canonical Job.status remains candidate-independent)
+```
+
+### 1. List Evaluated Job Matches
+Query matches for a candidate sorted by relevance score descending with optional score and eligibility filters:
+
+```bash
+curl -s "http://localhost:8000/api/v1/matches?min_score=70.0&eligibility=ELIGIBLE&page=1&page_size=20"
+```
+
+### 2. Get Match Details & Line-Item Mathematical Breakdown
+Inspect the complete mathematical audit trail, including Layer 1 boolean checks and Layer 2 component point breakdowns:
+
+```bash
+curl -s "http://localhost:8000/api/v1/matches/<MATCH_UUID>"
+```
+
+### 3. Re-evaluate Match for a Job
+Re-run Layer 1 eligibility and Layer 2 scoring on-demand against updated candidate skills or preferences:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/matches/<JOB_UUID>/re-evaluate"
+```
+
+---
+
+## Pipeline Orchestration & Scheduling (Milestone 10)
+
+Milestone 10 coordinates the entire JobRadar AI pipeline—Discovery, Canonicalization, Matching, Semantic Analysis, Resume Tailoring, and Email Notifications—with durable run persistence, atomic metric tracking, and concurrency protection.
+
+### 1. Trigger a Pipeline Run
+
+```bash
+curl -X POST http://localhost:8000/api/v1/pipeline-runs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "candidate_profile_id": "<CANDIDATE_PROFILE_UUID>",
+    "trigger_type": "MANUAL"
+  }'
+```
+
+Returns `202 Accepted` with initial status `PENDING` and assigned Celery task id.
+
+### 2. Check Pipeline Run Status & Metrics
+
+```bash
+curl -s http://localhost:8000/api/v1/pipeline-runs/<RUN_UUID>
+```
+
+Sample JSON response:
+```json
+{
+  "id": "b588caef-f769-465c-b67e-8ea6f0a42ebb",
+  "candidate_profile_id": "987a033e-e243-4160-ae6a-fd8b2a402645",
+  "trigger_type": "MANUAL",
+  "status": "COMPLETED",
+  "started_at": "2026-11-05T11:24:17.818091Z",
+  "completed_at": "2026-11-05T11:24:20.069445Z",
+  "metrics": {
+    "jobs_discovered": 4,
+    "jobs_created": 1,
+    "jobs_updated": 0,
+    "jobs_normalized": 1,
+    "jobs_deduplicated": 0,
+    "jobs_evaluated": 1,
+    "matches_created": 1,
+    "matches_qualified": 1,
+    "semantic_analyses_completed": 1,
+    "semantic_analyses_failed": 0,
+    "resumes_generated": 1,
+    "resumes_failed": 0,
+    "notifications_sent": 1,
+    "notifications_failed": 0
+  },
+  "error_summary": null,
+  "created_at": "2026-11-05T11:24:17.516691Z",
+  "updated_at": "2026-11-05T11:24:20.070449Z"
+}
+```
+
+### 3. Cancel an Active Pipeline Run
+
+```bash
+curl -X POST http://localhost:8000/api/v1/pipeline-runs/<RUN_UUID>/cancel
+```
+
+### 4. Standalone Pipeline Scheduler Daemon
+
+In addition to Celery Beat periodic tasks, a local-first standalone scheduler daemon with Redis leader election can be run:
+
+```bash
+cd backend
+python -m app.modules.pipeline.scheduler
+```
+
+Guarantees only one active leader scheduler across multiple processes or containers via Redis key `lock:pipeline_scheduler:leader`.
+
+### 5. Operational Health & Readiness Endpoints
+
+- **Root Liveness:** `GET http://localhost:8000/health` (also `/api/v1/health`)
+- **Root Readiness:** `GET http://localhost:8000/ready` (tests live PostgreSQL, Redis, and optional Ollama connectivity)
+
+---
+
+## Background Processing & Task Architecture
 
 - **Source Adapter Contract:** Abstract `JobSourceAdapter` interface (`GreenhouseAdapter`, `LeverAdapter`, `CareerPageAdapter`) with decoupled HTTP client lifecycle.
 - **Idempotent Ingestion:** Compound unique constraint `(job_source_id, external_job_id)` on `job_source_records` prevents redundant row creation. Repeat discoveries update `last_seen_at`; material payload changes compute a new SHA-256 hash and mark records for downstream re-normalization.

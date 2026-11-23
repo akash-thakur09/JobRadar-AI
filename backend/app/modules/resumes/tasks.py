@@ -1,6 +1,5 @@
 """Celery background tasks for resume parsing and extraction."""
 
-import asyncio
 import logging
 import uuid
 from typing import Any
@@ -10,6 +9,7 @@ from app.infrastructure.storage.local import get_file_storage
 from app.modules.resumes.models import ResumeProcessingStatus
 from app.modules.resumes.parsers.registry import get_parser_for_mime_type
 from app.modules.resumes.repository import MasterResumeRepository
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ def process_resume_task(self: Any, version_id_str: str) -> dict[str, Any]:
     """Background task to extract text and structure from uploaded resume binary."""
     task_id = getattr(getattr(self, "request", None), "id", "local-exec")
     logger.info("Starting resume parsing task: version_id=%s (task_id=%s)", version_id_str, task_id)
-    return asyncio.run(_async_process_resume(version_id_str, str(task_id)))
+    return run_async_task(_async_process_resume(version_id_str, str(task_id)))
 
 
 async def _async_process_resume(version_id_str: str, task_id: str) -> dict[str, Any]:

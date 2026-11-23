@@ -105,6 +105,7 @@ async def test_async_discover_source_jobs_retryable_failure() -> None:
     mock_task = MagicMock()
     mock_task.request.retries = 0
     mock_task.retry.side_effect = RuntimeError("RetryTriggered")
+    mock_task.max_retries = 3
 
     with (
         patch("app.modules.discovery.tasks.DiscoveryRepository") as MockRepoClass,

@@ -3,6 +3,7 @@
 import logging
 import math
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,7 +47,7 @@ class DiscoveryService:
 
         # 2. Validate configuration against source adapter
         adapter = get_adapter_for_source_type(request.source_type)
-        adapter.validate_configuration(request.configuration)
+        adapter.validate_source(request.base_url, request.configuration)
 
         # 3. Persist record
         source_data = request.model_dump()
@@ -96,9 +97,12 @@ class DiscoveryService:
                 raise EntityAlreadyExistsError("JobSource", update_data["name"])
 
         # Configuration validation
-        if "configuration" in update_data and update_data["configuration"] is not None:
+        if update_data.get("configuration") is not None or update_data.get("base_url") is not None:
             adapter = get_adapter_for_source_type(source.source_type)
-            adapter.validate_configuration(update_data["configuration"])
+            adapter.validate_source(
+                update_data.get("base_url") or source.base_url,
+                source.configuration if update_data.get("configuration") is None else update_data["configuration"],
+            )
 
         updated_source = await self.repository.update_source(session, source, update_data)
         await session.commit()
@@ -127,7 +131,7 @@ class DiscoveryService:
 
         # Validate adapter configuration before queuing
         adapter = get_adapter_for_source_type(source.source_type)
-        adapter.validate_configuration(source.configuration)
+        adapter.validate_source(source.base_url, source.configuration)
 
         run = await self.repository.create_discovery_run(
             session=session,
@@ -137,7 +141,15 @@ class DiscoveryService:
         await session.commit()
 
         # Enqueue background Celery task
-        discover_source_jobs_task.delay(str(source.id))
+        try:
+            discover_source_jobs_task.delay(str(source.id), str(run.id))
+        except Exception:
+            logger.exception("Could not enqueue discovery run %s", run.id)
+            run.status = DiscoveryRunStatusEnum.FAILED
+            run.completed_at = datetime.now(UTC)
+            run.error_summary = "Discovery could not be queued. Check the worker and broker."
+            await session.commit()
+            return DiscoveryRunResponse.model_validate(run)
         logger.info(
             f"Dispatched background discovery task for source '{source.name}' (run {run.id})."
         )

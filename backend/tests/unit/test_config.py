@@ -54,3 +54,18 @@ def test_invalid_app_env() -> None:
     """Verify that an invalid app_env raises a validation error."""
     with pytest.raises(ValidationError):
         Settings(app_env="invalid_environment")  # type: ignore[arg-type]
+
+
+@pytest.mark.unit
+def test_compose_environment_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.example.test,https://qa.example.test")
+    monkeypatch.setenv("STORAGE_DIR", "/app/storage")
+    monkeypatch.setenv("SMTP_FROM_EMAIL", "alerts@example.test")
+    monkeypatch.setenv("OLLAMA_MODEL", "test-model")
+    monkeypatch.setenv("SMTP_USE_TLS", "true")
+    settings = Settings(_env_file=None)
+    assert settings.cors_origins == ["https://app.example.test", "https://qa.example.test"]
+    assert settings.storage_dir == "/app/storage"
+    assert settings.smtp_from_email == "alerts@example.test"
+    assert settings.ollama_model == "test-model"
+    assert settings.smtp_use_tls

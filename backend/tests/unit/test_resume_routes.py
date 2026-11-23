@@ -209,7 +209,124 @@ async def test_download_resume_endpoint(sample_resume: MasterResume) -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.headers["content-type"] == "application/pdf"
     assert 'attachment; filename="resume.pdf"' in response.headers["content-disposition"]
+    assert "filename*=UTF-8''resume.pdf" in response.headers["content-disposition"]
     assert response.content == b"%PDF-1.4 binary content"
+
+
+@pytest.mark.asyncio
+async def test_download_resume_unicode_en_dash_docx(sample_resume: MasterResume) -> None:
+    """DOCX filename containing an en dash (\u2013) downloads successfully without HTTP 500."""
+    app = create_app()
+    mock_service = AsyncMock()
+    docx_bytes = b"PK\x03\x04\x14\x00\x06\x00 dummy valid docx binary content"
+    docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    unicode_filename = "Akash Thakur \u2013 Resume.docx"
+
+    mock_service.download_resume_file.return_value = (
+        docx_bytes,
+        docx_mime,
+        unicode_filename,
+    )
+
+    app.dependency_overrides[get_resume_service] = lambda: mock_service
+    app.dependency_overrides[get_db_session] = lambda: AsyncMock()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/resumes/{sample_resume.id}/download")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.headers["content-type"] == docx_mime
+    assert response.content == docx_bytes
+
+    cd_header = response.headers["content-disposition"]
+    assert 'filename="Akash Thakur - Resume.docx"' in cd_header
+    assert "filename*=UTF-8''Akash%20Thakur%20%E2%80%93%20Resume.docx" in cd_header
+    cd_header.encode("latin-1")
+
+
+@pytest.mark.asyncio
+async def test_download_resume_spaces_and_parentheses(sample_resume: MasterResume) -> None:
+    """Filename containing spaces and parentheses encodes properly."""
+    app = create_app()
+    mock_service = AsyncMock()
+    pdf_bytes = b"%PDF-1.4 spaces and parens"
+    filename = "Senior Architect Resume (2026).pdf"
+
+    mock_service.download_resume_file.return_value = (
+        pdf_bytes,
+        "application/pdf",
+        filename,
+    )
+
+    app.dependency_overrides[get_resume_service] = lambda: mock_service
+    app.dependency_overrides[get_db_session] = lambda: AsyncMock()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/resumes/{sample_resume.id}/download")
+
+    assert response.status_code == status.HTTP_200_OK
+    cd_header = response.headers["content-disposition"]
+    assert 'filename="Senior Architect Resume (2026).pdf"' in cd_header
+    assert "filename*=UTF-8''Senior%20Architect%20Resume%20%282026%29.pdf" in cd_header
+    assert response.content == pdf_bytes
+
+
+@pytest.mark.asyncio
+async def test_download_resume_non_latin_unicode(sample_resume: MasterResume) -> None:
+    """Non-Latin Unicode filenames provide a valid ASCII fallback and preserved UTF-8 filename*."""
+    app = create_app()
+    mock_service = AsyncMock()
+    binary_content = b"%PDF-1.4 non-latin content"
+    filename = "\u7b80\u5386.pdf"
+
+    mock_service.download_resume_file.return_value = (
+        binary_content,
+        "application/pdf",
+        filename,
+    )
+
+    app.dependency_overrides[get_resume_service] = lambda: mock_service
+    app.dependency_overrides[get_db_session] = lambda: AsyncMock()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/resumes/{sample_resume.id}/download")
+
+    assert response.status_code == status.HTTP_200_OK
+    cd_header = response.headers["content-disposition"]
+    assert 'filename="resume.pdf"' in cd_header
+    assert "filename*=UTF-8''%E7%AE%80%E5%8E%86.pdf" in cd_header
+    assert response.content == binary_content
+    cd_header.encode("latin-1")
+
+
+@pytest.mark.asyncio
+async def test_download_resume_crlf_header_injection_prevention(sample_resume: MasterResume) -> None:
+    """Filename containing CR/LF cannot inject additional headers into the response."""
+    app = create_app()
+    mock_service = AsyncMock()
+    malicious_filename = "resume\r\nInjected-Header: malicious_payload\r\nfile.pdf"
+
+    mock_service.download_resume_file.return_value = (
+        b"%PDF-1.4 dummy",
+        "application/pdf",
+        malicious_filename,
+    )
+
+    app.dependency_overrides[get_resume_service] = lambda: mock_service
+    app.dependency_overrides[get_db_session] = lambda: AsyncMock()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get(f"/api/v1/resumes/{sample_resume.id}/download")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert "injected-header" not in response.headers
+    cd_header = response.headers["content-disposition"]
+    assert "\r" not in cd_header
+    assert "\n" not in cd_header
 
 
 @pytest.mark.asyncio

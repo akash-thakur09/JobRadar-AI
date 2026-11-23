@@ -33,6 +33,13 @@ class ReadinessResponse(BaseModel):
 
 
 @router.get(
+    "",
+    response_model=LivenessResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Application Liveness Check (Root alias)",
+    include_in_schema=False,
+)
+@router.get(
     "/live",
     response_model=LivenessResponse,
     status_code=status.HTTP_200_OK,
@@ -58,10 +65,10 @@ async def check_liveness() -> dict[str, Any]:
         503: {"description": "One or more infrastructure dependencies are unhealthy."},
     },
     summary="Infrastructure Readiness Check",
-    description="Verifies that required dependencies (PostgreSQL and Redis) are reachable.",
+    description="Verifies that required dependencies (PostgreSQL and Redis) are reachable. Reports optional Ollama status.",
 )
 async def check_readiness(response: Response) -> dict[str, Any]:
-    """Verify PostgreSQL and Redis reachability."""
+    """Verify PostgreSQL and Redis reachability, plus optional LLM availability."""
     # Run infrastructure checks concurrently
     db_result, redis_result = await asyncio.gather(
         check_db_health(),
@@ -70,6 +77,17 @@ async def check_readiness(response: Response) -> dict[str, Any]:
 
     db_healthy, db_detail = db_result
     redis_healthy, redis_detail = redis_result
+
+    # Check optional LLM provider (Ollama) without making overall service unready
+    ollama_detail = "unconfigured"
+    try:
+        from app.modules.matching.llm.factory import get_llm_provider
+
+        llm = get_llm_provider()
+        llm_healthy = await llm.ping()
+        ollama_detail = "healthy" if llm_healthy else "degraded (offline)"
+    except Exception:
+        ollama_detail = "degraded (offline)"
 
     is_overall_healthy = db_healthy and redis_healthy
     if not is_overall_healthy:
@@ -81,5 +99,6 @@ async def check_readiness(response: Response) -> dict[str, Any]:
         "components": {
             "database": db_detail,
             "redis": redis_detail,
+            "ollama": ollama_detail,
         },
     }

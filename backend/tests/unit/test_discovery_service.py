@@ -200,4 +200,4 @@ async def test_trigger_discovery_success_dispatches_task(
         resp = await service.trigger_discovery_for_source(mock_session, source_id)
         assert resp.id == run.id
         assert resp.status == DiscoveryRunStatusEnum.PENDING
-        mock_delay.assert_called_once_with(str(source_id))
+        mock_delay.assert_called_once_with(str(source_id), str(run.id))

@@ -16,6 +16,10 @@ celery_app = Celery(
         "app.modules.resumes.tasks",
         "app.modules.discovery.tasks",
         "app.modules.jobs.tasks",
+        "app.modules.matching.tasks",
+        "app.modules.tailoring.tasks",
+        "app.modules.notifications.tasks",
+        "app.modules.pipeline.tasks",
     ],
 )
 
@@ -47,6 +51,10 @@ celery_app.conf.update(
         "process-pending-raw-jobs": {
             "task": "app.modules.jobs.tasks.process_pending_raw_records_task",
             "schedule": 120.0,  # every 2 minutes
+        },
+        "schedule-candidate-pipeline-runs": {
+            "task": "app.modules.pipeline.tasks.schedule_candidate_pipeline_runs_task",
+            "schedule": 300.0,  # every 5 minutes
         },
     },
 )
