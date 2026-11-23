@@ -95,10 +95,12 @@ class DiscoveryRepository:
         return run
 
     async def get_discovery_run_by_id(
-        self, session: AsyncSession, run_id: uuid.UUID
+        self, session: AsyncSession, run_id: uuid.UUID, *, for_update: bool = False
     ) -> DiscoveryRun | None:
         """Fetch a discovery run record by ID."""
         stmt = select(DiscoveryRun).where(DiscoveryRun.id == run_id)
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await session.execute(stmt)
         return result.scalar_one_or_none()
 

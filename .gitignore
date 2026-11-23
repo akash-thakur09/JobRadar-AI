@@ -67,3 +67,6 @@ logs/
 .DS_Store
 Thumbs.db
 
+
+# Celery Beat
+celerybeat-schedule*

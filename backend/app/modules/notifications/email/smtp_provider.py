@@ -4,6 +4,7 @@ import asyncio
 import email.utils
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage as PyEmailMessage
 
 from app.modules.notifications.email.exceptions import (
@@ -50,11 +51,20 @@ class SmtpEmailProvider:
     def _sync_ping(self) -> bool:
         try:
             with smtplib.SMTP(self.host, self.port, timeout=self.timeout_seconds) as server:
-                server.noop()
-            return True
+                self._configure_connection(server)
+                code, _ = server.noop()
+                return code == 250
         except Exception as exc:
             logger.debug(f"SMTP ping failed for {self.host}:{self.port}: {exc}")
             return False
+
+    def _configure_connection(self, server: smtplib.SMTP) -> None:
+        if self.use_tls:
+            server.starttls(context=ssl.create_default_context())
+        if self.username or self.password:
+            if not self.username or not self.password:
+                raise smtplib.SMTPAuthenticationError(535, b"SMTP requires both username and password")
+            server.login(self.username, self.password)
 
     async def send_email(self, message: EmailMessage) -> EmailDeliveryResult:
         """Send email message asynchronously via threadpool worker."""
@@ -96,12 +106,7 @@ class SmtpEmailProvider:
         # 2. Transmit via SMTP
         try:
             with smtplib.SMTP(self.host, self.port, timeout=self.timeout_seconds) as server:
-                if self.use_tls:
-                    server.starttls()
-
-                if self.username and self.password:
-                    server.login(self.username, self.password)
-
+                self._configure_connection(server)
                 server.send_message(msg)
 
             logger.info(

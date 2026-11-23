@@ -43,7 +43,7 @@ export function DashboardGreeting({ profile, onTriggerRun }: DashboardGreetingPr
         </h1>
         <p className="text-xs sm:text-sm text-terminal-muted font-sans max-w-2xl">
           {profile?.headline || profile?.current_role
-            ? `${profile.headline || profile.current_role} &bull; JobRadar AI is monitoring upstream postings and scoring opportunities against your Evidence Vault.`
+            ? `${profile.headline || profile.current_role} • JobRadar AI is monitoring upstream postings and scoring opportunities against your Evidence Vault.`
             : "JobRadar AI is actively monitoring upstream sources and scoring opportunities against your Evidence Vault."}
         </p>
       </div>

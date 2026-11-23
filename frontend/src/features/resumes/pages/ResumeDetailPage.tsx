@@ -12,7 +12,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { useResume, useResumeContent, useResumeVersions, useActivateResume } from "@/hooks/useResumes";
+import { isResumeParsing, useResume, useResumeContent, useResumeVersions, useActivateResume } from "@/hooks/useResumes";
 import { resumesService } from "@/services/resumes.service";
 import { LoadingState } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
@@ -36,11 +36,12 @@ export function ResumeDetailPage() {
     refetch: refetchResume,
   } = useResume(resumeId || "");
 
+  const isParsing = isResumeParsing(resume?.active_version?.processing_status);
   const {
     data: parsedContent,
     isLoading: isContentLoading,
     error: contentError,
-  } = useResumeContent(resumeId || "");
+  } = useResumeContent(resumeId || "", Boolean(resume) && !isParsing);
 
   const { data: versions } = useResumeVersions(resumeId || "");
 
@@ -248,7 +249,7 @@ export function ResumeDetailPage() {
             </span>
           </div>
 
-          {isContentLoading ? (
+          {isParsing || isContentLoading ? (
             <LoadingState message="Extracting structured sections..." />
           ) : contentError ? (
             <Alert variant="warning" title="Could Not Retrieve Structured Content">

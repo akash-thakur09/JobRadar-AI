@@ -403,6 +403,11 @@ async def test_retry_delivery_lifecycle(
     with pytest.raises(DeliveryMaxRetriesExceededError):
         await service.retry_delivery(mock_session, delivery.id, force=False)
 
+    forced = await service.retry_delivery(mock_session, delivery.id, force=True)
+    assert forced.status == NotificationDeliveryStatusEnum.PENDING
+    assert forced.attempt_count == 3
+    assert forced.max_attempts == 4
+
     # 4. Successful retry when attempt_count < max_attempts
     delivery.attempt_count = 1
     retried = await service.retry_delivery(mock_session, delivery.id, force=False)

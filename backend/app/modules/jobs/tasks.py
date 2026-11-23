@@ -1,6 +1,5 @@
 """Celery asynchronous background tasks for Job Normalization, Canonicalization, and Scheduling."""
 
-import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -12,6 +11,7 @@ from sqlalchemy import select
 from app.database.session import get_session_factory
 from app.modules.discovery.models import DiscoveryRun, DiscoveryRunStatusEnum, JobSource
 from app.modules.jobs.service import get_job_service
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = get_task_logger(__name__)
@@ -27,7 +27,7 @@ logger = get_task_logger(__name__)
 )
 def process_raw_job_record_task(self: Task, source_record_id: str) -> dict[str, Any]:
     """Execute normalization, fingerprinting, and canonicalization for a single raw record."""
-    return asyncio.run(_async_process_raw_job_record(self, source_record_id))
+    return run_async_task(_async_process_raw_job_record(self, source_record_id))
 
 
 @celery_app.task(
@@ -38,7 +38,7 @@ def process_raw_job_record_task(self: Task, source_record_id: str) -> dict[str, 
 )
 def process_pending_raw_records_task(batch_size: int = 100) -> dict[str, Any]:
     """Batch process pending uncanonicalized raw source records."""
-    return asyncio.run(_async_process_pending_raw_records(batch_size))
+    return run_async_task(_async_process_pending_raw_records(batch_size))
 
 
 @celery_app.task(
@@ -49,7 +49,7 @@ def process_pending_raw_records_task(batch_size: int = 100) -> dict[str, Any]:
 )
 def schedule_due_discovery_runs_task() -> dict[str, Any]:
     """Periodic Celery Beat task to queue discovery runs for sources due for polling."""
-    return asyncio.run(_async_schedule_due_discovery_runs())
+    return run_async_task(_async_schedule_due_discovery_runs())
 
 
 async def _async_process_raw_job_record(task: Task, record_id_str: str) -> dict[str, Any]:

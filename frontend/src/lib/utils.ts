@@ -9,6 +9,11 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+export function readPageParam(value: string | null): number {
+  const page = Number(value);
+  return Number.isSafeInteger(page) && page >= 1 ? page : 1;
+}
+
 /**
  * Format ISO date string into readable local format
  */

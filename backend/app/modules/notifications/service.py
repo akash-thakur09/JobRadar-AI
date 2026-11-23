@@ -9,10 +9,11 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.runtime_settings import get_runtime_settings
 from app.infrastructure.storage.base import FileStorage
 from app.infrastructure.storage.local import get_file_storage
 from app.modules.candidate.models import CandidateProfile, User
+from app.modules.candidate.repository import DEFAULT_CANDIDATE_EMAIL
 from app.modules.jobs.models import JobStatusEnum
 from app.modules.notifications.email.factory import get_email_provider
 from app.modules.notifications.email.protocol import EmailProvider
@@ -119,6 +120,12 @@ class NotificationService:
                     )
                 clean_recipient = str(recipient).lower().strip()
 
+        settings = get_runtime_settings()
+        if clean_recipient == DEFAULT_CANDIDATE_EMAIL:
+            clean_recipient = settings.notification_recipient_email.lower().strip()
+            if not clean_recipient or clean_recipient == DEFAULT_CANDIDATE_EMAIL:
+                raise NotificationError("Set a notification recipient address in Settings.")
+
         # 3. Check for existing delivery (Idempotency check)
         existing = await self.repository.get_by_job_and_recipient(
             session=session,
@@ -134,7 +141,6 @@ class NotificationService:
             return existing
 
         # 4. Create new pending delivery record
-        settings = get_settings()
         delivery = NotificationDelivery(
             candidate_profile_id=tailored_resume.candidate_profile_id,
             job_id=tailored_resume.job_id,
@@ -173,6 +179,12 @@ class NotificationService:
                 f"NotificationDelivery {delivery_id} is already in SENT status; terminating idempotently."
             )
             return delivery
+
+        if delivery.recipient_email == DEFAULT_CANDIDATE_EMAIL:
+            delivery.status = NotificationDeliveryStatusEnum.FAILED
+            delivery.failed_at = datetime.now(UTC)
+            delivery.last_error = "This delivery uses the old placeholder address. Configure the recipient in Settings."
+            return await self.repository.save(session, delivery)
 
         # 3. Guard retry limits
         if delivery.attempt_count >= delivery.max_attempts:
@@ -328,12 +340,15 @@ class NotificationService:
                 reason="Notification is currently actively being processed by a worker.",
             )
 
-        if delivery.attempt_count >= delivery.max_attempts and not force:
-            raise DeliveryMaxRetriesExceededError(
-                delivery_id=delivery_id,
-                attempt_count=delivery.attempt_count,
-                max_attempts=delivery.max_attempts,
-            )
+        if delivery.attempt_count >= delivery.max_attempts:
+            if not force:
+                raise DeliveryMaxRetriesExceededError(
+                    delivery_id=delivery_id,
+                    attempt_count=delivery.attempt_count,
+                    max_attempts=delivery.max_attempts,
+                )
+            # Preserve the delivery history and grant the worker one additional attempt.
+            delivery.max_attempts = delivery.attempt_count + 1
 
         delivery.status = NotificationDeliveryStatusEnum.PENDING
         delivery.last_error = None

@@ -65,7 +65,7 @@ def normalize_slug(text: str) -> str:
     return slug
 
 
-def sanitize_application_url(url: str) -> str:
+def sanitize_application_url(url: str, *, preserve_path: bool = False) -> str:
     """Sanitize and canonicalize application URLs.
 
     Rules matching technical design TD-004:
@@ -88,10 +88,11 @@ def sanitize_application_url(url: str) -> str:
     netloc = parsed.netloc.lower()
 
     # 3. Lowercase path & strip trailing slash and default document names
-    path = parsed.path.lower()
-    path = re.sub(r"/(index|default)\.(html?|php|asp[x]?)$", "", path)
-    if path != "/" and path.endswith("/"):
-        path = path.rstrip("/")
+    path = parsed.path
+    if not preserve_path:
+        path = re.sub(r"/(index|default)\.(html?|php|asp[x]?)$", "", path.lower())
+        if path != "/" and path.endswith("/"):
+            path = path.rstrip("/")
 
     # 4. Filter query parameters
     query_params = urllib.parse.parse_qsl(parsed.query, keep_blank_values=False)

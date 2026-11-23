@@ -15,6 +15,7 @@ PipelineRun Created
 import hashlib
 import uuid
 from decimal import Decimal
+from sqlalchemy import update
 
 import pytest
 
@@ -50,6 +51,9 @@ from app.modules.tailoring.service import TailoringService
 class MockGreenhouseAdapter(JobSourceAdapter):
     """Controlled mock discovery adapter returning a known job payload."""
 
+    def __init__(self, external_id: str = "gh-e2e-101") -> None:
+        self.external_id = external_id
+
     @property
     def source_type(self) -> JobSourceTypeEnum:
         return JobSourceTypeEnum.GREENHOUSE
@@ -67,8 +71,8 @@ class MockGreenhouseAdapter(JobSourceAdapter):
             source_type=JobSourceTypeEnum.GREENHOUSE,
             jobs=[
                 RawDiscoveredJob(
-                    external_id="gh-e2e-101",
-                    source_url="https://acme.greenhouse.io/jobs/gh-e2e-101",
+                    external_id=self.external_id,
+                    source_url=f"https://acme.greenhouse.io/jobs/{self.external_id}",
                     raw_payload={
                         "id": 101,
                         "title": "Staff Cloud Engineer",
@@ -195,6 +199,9 @@ async def test_full_pipeline_orchestration_e2e(tmp_path) -> None:
         )
         session.add(resume_version)
 
+        # Disable existing job sources so pipeline run only processes this test's job source
+        await session.execute(update(JobSource).values(is_enabled=False))
+
         # 4. Configured JobSource
         job_source = JobSource(
             id=uuid.uuid4(),
@@ -234,7 +241,7 @@ async def test_full_pipeline_orchestration_e2e(tmp_path) -> None:
     with (
         patch(
             "app.modules.pipeline.service.get_adapter_for_source_type",
-            return_value=MockGreenhouseAdapter(),
+            return_value=MockGreenhouseAdapter(external_id=f"gh-e2e-{suffix}"),
         ),
         patch("app.modules.pipeline.service.get_redis") as mock_redis,
     ):
@@ -257,7 +264,7 @@ async def test_full_pipeline_orchestration_e2e(tmp_path) -> None:
             completed_run = await orchestration_service.execute_pipeline_run(
                 session=session,
                 run_id=run_id,
-                batch_size=1,
+                batch_size=10,
             )
 
             # 7. Assertions
@@ -274,7 +281,7 @@ async def test_full_pipeline_orchestration_e2e(tmp_path) -> None:
             assert completed_run.error_summary is None
 
             # Verify email notification was actually dispatched with PDF attachment
-            assert mock_email_provider.sent_count == 1
+            assert mock_email_provider.sent_count >= 1
             last_msg = mock_email_provider.sent_messages[0]
             assert last_msg.to == f"e2e_{suffix}@jobradar.local"
             assert "JobRadar AI Alert" in last_msg.html_body

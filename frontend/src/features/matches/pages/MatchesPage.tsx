@@ -1,3 +1,4 @@
+import { readPageParam } from "@/lib/utils";
 import { useSearchParams, Link } from "react-router-dom";
 import { Play, RefreshCw, FolderOpen } from "lucide-react";
 import { useMatches } from "@/hooks/useMatches";
@@ -18,7 +19,7 @@ export function MatchesPage() {
   // Read URL search params
   const minScore = searchParams.get("min_score") || "";
   const eligibility = searchParams.get("eligibility") || "";
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = readPageParam(searchParams.get("page"));
 
   const {
     data: matchesResponse,

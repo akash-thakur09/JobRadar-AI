@@ -161,4 +161,4 @@ def test_normalizer_registry() -> None:
     assert lev_norm.source_type == JobSourceTypeEnum.LEVER
 
     with pytest.raises(ValueError, match="No job normalizer registered"):
-        get_normalizer_for_source_type(JobSourceTypeEnum.CAREER_PAGE)
+        get_normalizer_for_source_type(JobSourceTypeEnum.MANUAL_FEED)

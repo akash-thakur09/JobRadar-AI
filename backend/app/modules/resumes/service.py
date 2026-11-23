@@ -136,14 +136,20 @@ class ResumeService:
                     parsing_error=str(exc),
                 )
         else:
-            # Dispatch background task to Celery
+            # Make the version visible to a worker before dispatch.
+            await session.commit()
             try:
                 from app.modules.resumes.tasks import process_resume_task
 
                 process_resume_task.apply_async(args=[str(version.id)], queue="processing")
             except Exception:
-                # If celery broker is offline in local dev without queue, fallback gracefully
-                pass
+                version = await self.repository.update_version(
+                    session=session,
+                    version=version,
+                    is_valid=False,
+                    processing_status=ResumeProcessingStatus.FAILED.value,
+                    parsing_error="Parsing could not be queued. Check the worker and broker.",
+                )
 
         return resume, version
 

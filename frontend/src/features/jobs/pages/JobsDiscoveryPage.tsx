@@ -1,3 +1,4 @@
+import { readPageParam } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { Briefcase, RefreshCw } from "lucide-react";
 import { useJobs, useProcessPendingJobs } from "@/hooks/useJobs";
@@ -20,7 +21,7 @@ export function JobsDiscoveryPage() {
   const search = searchParams.get("search") || "";
   const workplaceType = searchParams.get("workplace") || "";
   const status = searchParams.get("status") || "";
-  const page = parseInt(searchParams.get("page") || "1", 10);
+  const page = readPageParam(searchParams.get("page"));
 
   const {
     data: jobsResponse,

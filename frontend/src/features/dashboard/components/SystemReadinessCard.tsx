@@ -9,6 +9,11 @@ export interface SystemReadinessCardProps {
   isLoading?: boolean;
 }
 
+function ComponentStatus({ detail, checking }: { detail?: string; checking?: boolean }) {
+  const variant = detail === "healthy" ? "success" : detail ? "warning" : "neutral";
+  return <Badge variant={variant}>{detail || (checking ? "Checking" : "Unavailable")}</Badge>;
+}
+
 export function SystemReadinessCard({ readiness, liveness, isLoading }: SystemReadinessCardProps) {
   const isHealthy = readiness?.status === "healthy";
 
@@ -36,9 +41,7 @@ export function SystemReadinessCard({ readiness, liveness, isLoading }: SystemRe
               <Database className="w-4 h-4 text-terminal-muted" />
               <span className="font-semibold font-display text-terminal-dark">PostgreSQL 16</span>
             </div>
-            <span className="text-[11px] font-mono font-medium text-[#185C36] bg-[#5BCB8A]/15 px-2 py-0.5 rounded border border-[#5BCB8A]/40">
-              {readiness?.components.database || "Connected"}
-            </span>
+            <ComponentStatus detail={readiness?.components.database} checking={isLoading} />
           </div>
 
           {/* Redis */}
@@ -47,33 +50,23 @@ export function SystemReadinessCard({ readiness, liveness, isLoading }: SystemRe
               <HardDrive className="w-4 h-4 text-terminal-muted" />
               <span className="font-semibold font-display text-terminal-dark">Redis & Celery</span>
             </div>
-            <span className="text-[11px] font-mono font-medium text-[#185C36] bg-[#5BCB8A]/15 px-2 py-0.5 rounded border border-[#5BCB8A]/40">
-              {readiness?.components.redis || "Connected"}
-            </span>
+            <ComponentStatus detail={readiness?.components.redis} checking={isLoading} />
           </div>
 
           {/* Ollama LLM */}
           <div className="flex items-center justify-between p-2.5 rounded-card bg-terminal-warm/60 border border-terminal-warmBorder/80">
             <div className="flex items-center gap-2">
               <Cpu className="w-4 h-4 text-terminal-muted" />
-              <span className="font-semibold font-display text-terminal-dark">Ollama LLM (Llama 3.1)</span>
+              <span className="font-semibold font-display text-terminal-dark">LLM provider</span>
             </div>
-            <span
-              className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded border ${
-                readiness?.components.ollama?.includes("offline")
-                  ? "bg-terminal-warm text-terminal-muted border-terminal-warmBorder"
-                  : "bg-[#8DB4FF]/15 text-[#183B7E] border-[#8DB4FF]/40"
-              }`}
-            >
-              {readiness?.components.ollama || "Local / Mock Provider"}
-            </span>
+            <ComponentStatus detail={readiness?.components.ollama} checking={isLoading} />
           </div>
         </div>
 
         {/* Runtime info */}
         <div className="flex items-center justify-between text-[11px] font-mono text-terminal-muted pt-2 border-t border-terminal-warmBorder">
-          <span>Env: <code className="text-terminal-dark">{liveness?.environment || "development"}</code></span>
-          <span>Version: <code className="text-terminal-dark">v{liveness?.version || "1.0.0"}</code></span>
+          <span>Environment <code className="text-terminal-dark">{liveness?.environment || "Unavailable"}</code></span>
+          <span>Version <code className="text-terminal-dark">{liveness?.version ? `v${liveness.version}` : "Unavailable"}</code></span>
         </div>
       </CardContent>
     </Card>

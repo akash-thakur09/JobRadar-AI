@@ -1,8 +1,8 @@
 """Celery asynchronous tasks for Resume Tailoring and PDF generation."""
 
-import asyncio
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from celery import Task
@@ -11,6 +11,7 @@ from app.database.session import get_session_factory
 from app.infrastructure.redis import get_redis
 from app.modules.tailoring.enums import TailoredResumeStatusEnum
 from app.modules.tailoring.service import get_tailoring_service
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 )
 def generate_tailored_resume_task(self: Task, tailored_resume_id: str) -> dict[str, Any]:
     """Execute end-to-end resume tailoring pipeline for a requested tailored resume."""
-    return asyncio.run(_async_generate_tailored_resume(self, tailored_resume_id))
+    return run_async_task(_async_generate_tailored_resume(self, tailored_resume_id))
 
 
 async def _async_generate_tailored_resume(
@@ -123,6 +124,16 @@ async def _async_generate_tailored_resume(
                 "notification_delivery_id": delivery_id,
             }
     except Exception as exc:
+        if task.max_retries is not None and task.request.retries >= task.max_retries:
+            logger.exception("Tailoring exhausted retries for %s", resume_uuid)
+            async with session_factory() as session:
+                failed_record = await service.repository.get_by_id(session, resume_uuid, load_relations=False)
+                if failed_record is not None and failed_record.generation_status != TailoredResumeStatusEnum.COMPLETED:
+                    failed_record.generation_status = TailoredResumeStatusEnum.FAILED
+                    failed_record.validation_error = "Tailoring failed after retries. Check the worker logs and regenerate."
+                    failed_record.completed_at = datetime.now(UTC)
+                    await session.commit()
+            return {"status": "FAILED", "tailored_resume_id": str(resume_uuid)}
         logger.warning(
             f"Error during resume tailoring pipeline for record {tailored_resume_id_str}: {exc}. Retrying..."
         )

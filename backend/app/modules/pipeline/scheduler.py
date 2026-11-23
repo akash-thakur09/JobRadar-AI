@@ -6,11 +6,12 @@ import signal
 from datetime import UTC, datetime
 from typing import Any
 
-from app.core.config import get_settings
+from app.core.runtime_settings import get_runtime_settings
 from app.infrastructure.redis import get_redis
 from app.modules.pipeline.tasks import schedule_candidate_pipeline_runs_task
 
 logger = logging.getLogger(__name__)
+SCHEDULER_LEADER_LOCK = "lock:pipeline_scheduler:leader"
 
 
 class StandalonePipelineScheduler:
@@ -25,14 +26,13 @@ class StandalonePipelineScheduler:
 
     def __init__(self, check_interval_seconds: float = 60.0) -> None:
         self.check_interval_seconds = check_interval_seconds
-        self.settings = get_settings()
         self._running = False
         self._redis_client = None
 
     @property
     def is_enabled(self) -> bool:
         """Return True if automated scheduling is enabled in configuration."""
-        return bool(self.settings.pipeline_scheduler_enabled)
+        return get_runtime_settings().pipeline_scheduler_enabled
 
     async def run(self) -> None:
         """Start the periodic scheduling loop until stopped."""
@@ -60,14 +60,13 @@ class StandalonePipelineScheduler:
     async def _execute_tick(self) -> dict[str, Any]:
         """Execute one scheduler tick with single-leader election."""
         redis = get_redis()
-        leader_lock_key = "lock:pipeline_scheduler:leader"
         lock_ttl = max(self.check_interval_seconds * 2, 60.0)
 
         lock = None
         is_leader = False
 
         try:
-            lock = redis.lock(leader_lock_key, timeout=lock_ttl, blocking_timeout=2.0)
+            lock = redis.lock(SCHEDULER_LEADER_LOCK, timeout=lock_ttl, blocking_timeout=2.0)
             is_leader = await lock.acquire()
         except Exception as redis_exc:
             logger.warning(

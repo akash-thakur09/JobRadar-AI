@@ -31,7 +31,7 @@ async def create_tailored_resume(
     service: TailoringService = Depends(get_tailoring_service),
 ) -> TailoredResumeSummaryResponse:
     """Initiate or retry resume tailoring for a qualified job match."""
-    record = await service.request_tailoring(session=session, request=request)
+    record = await service.request_tailoring(session=session, request=request, enqueue=True)
     await session.commit()
     return TailoredResumeSummaryResponse.model_validate(record)
 

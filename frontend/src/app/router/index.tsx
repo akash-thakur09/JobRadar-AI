@@ -14,8 +14,7 @@ import { ResumesPage } from "@/features/resumes/pages/ResumesPage";
 import { ResumeDetailPage } from "@/features/resumes/pages/ResumeDetailPage";
 import { TailoredResumesPage } from "@/features/tailored-resumes/pages/TailoredResumesPage";
 import { TailoredResumeDetailPage } from "@/features/tailored-resumes/pages/TailoredResumeDetailPage";
-import { PlaceholderPage } from "@/features/placeholder/pages/PlaceholderPage";
-import { Settings } from "lucide-react";
+import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -84,20 +83,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "settings",
-        element: (
-          <PlaceholderPage
-            title="Settings & Configuration"
-            description="System preferences, API connections, and scheduler configurations"
-            icon={Settings}
-            targetMilestone="Milestone 16"
-            plannedFeatures={[
-              "Backend API connection and proxy configuration",
-              "Ollama LLM model selection and timeout thresholds",
-              "Automated pipeline scheduler frequency and Redis leader status",
-              "SMTP notification provider credentials and testing",
-            ]}
-          />
-        ),
+        element: <SettingsPage />,
       },
     ],
   },

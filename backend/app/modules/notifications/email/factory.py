@@ -1,6 +1,6 @@
 """Factory for instantiating EmailProvider implementations."""
 
-from app.core.config import get_settings
+from app.core.runtime_settings import get_runtime_settings
 from app.modules.notifications.email.mock_provider import MockEmailProvider
 from app.modules.notifications.email.protocol import EmailProvider
 from app.modules.notifications.email.smtp_provider import SmtpEmailProvider
@@ -19,7 +19,7 @@ def get_email_provider() -> EmailProvider:
     if _override_provider is not None:
         return _override_provider
 
-    settings = get_settings()
+    settings = get_runtime_settings()
     if settings.email_provider.lower() == "mock" or settings.is_testing:
         return MockEmailProvider()
 

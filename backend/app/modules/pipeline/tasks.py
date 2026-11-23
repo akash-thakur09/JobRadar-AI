@@ -1,6 +1,5 @@
 """Celery asynchronous background tasks for Pipeline Orchestration and Scheduling."""
 
-import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -9,7 +8,7 @@ from typing import Any
 from celery import Task
 from sqlalchemy import select
 
-from app.core.config import get_settings
+from app.core.runtime_settings import get_runtime_settings
 from app.database.session import get_session_factory
 from app.modules.candidate.models import CandidateProfile
 from app.modules.pipeline.enums import (
@@ -18,6 +17,7 @@ from app.modules.pipeline.enums import (
 )
 from app.modules.pipeline.models import PipelineRun
 from app.modules.pipeline.service import get_pipeline_service
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 )
 def execute_pipeline_run_task(self: Task, pipeline_run_id: str) -> dict[str, Any]:
     """Execute end-to-end pipeline orchestration run for candidate discovery, matching, and delivery."""
-    return asyncio.run(_async_execute_pipeline_run(self, pipeline_run_id))
+    return run_async_task(_async_execute_pipeline_run(self, pipeline_run_id))
 
 
 @celery_app.task(
@@ -45,7 +45,7 @@ def execute_pipeline_run_task(self: Task, pipeline_run_id: str) -> dict[str, Any
 )
 def schedule_candidate_pipeline_runs_task(self: Task) -> dict[str, Any]:
     """Periodic task evaluating all candidates and queuing automated discovery runs when due."""
-    return asyncio.run(_async_schedule_candidate_pipeline_runs(self))
+    return run_async_task(_async_schedule_candidate_pipeline_runs(self))
 
 
 async def _async_execute_pipeline_run(task: Task, pipeline_run_id_str: str) -> dict[str, Any]:
@@ -89,7 +89,7 @@ async def _async_execute_pipeline_run(task: Task, pipeline_run_id_str: str) -> d
 
 async def _async_schedule_candidate_pipeline_runs(_task: Task) -> dict[str, Any]:
     """Scan candidate profiles and queue automated discovery pipeline runs if due."""
-    settings = get_settings()
+    settings = get_runtime_settings()
     if not settings.pipeline_scheduler_enabled:
         logger.info("Pipeline scheduler is disabled via configuration; skipping automated run.")
         return {"status": "SKIPPED", "reason": "scheduler_disabled"}

@@ -1,6 +1,6 @@
 """Factory for instantiating LLM provider implementations."""
 
-from app.core.config import get_settings
+from app.core.runtime_settings import get_runtime_settings
 from app.modules.matching.llm.mock_provider import MockLLMProvider
 from app.modules.matching.llm.ollama import OllamaProvider
 from app.modules.matching.llm.protocol import LLMProvider
@@ -19,7 +19,7 @@ def get_llm_provider() -> LLMProvider:
     if _override_provider is not None:
         return _override_provider
 
-    settings = get_settings()
+    settings = get_runtime_settings()
     if settings.llm_provider.lower() == "mock" or settings.is_testing:
         return MockLLMProvider()
 

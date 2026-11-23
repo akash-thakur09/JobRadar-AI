@@ -62,7 +62,7 @@ async def test_pipeline_task_successful_execution() -> None:
 async def test_schedule_candidate_runs_when_disabled() -> None:
     """_async_schedule_candidate_pipeline_runs exits as SKIPPED when scheduler disabled."""
     mock_task = MagicMock()
-    with patch("app.modules.pipeline.tasks.get_settings") as mock_settings:
+    with patch("app.modules.pipeline.tasks.get_runtime_settings") as mock_settings:
         mock_settings.return_value.pipeline_scheduler_enabled = False
 
         result = await _async_schedule_candidate_pipeline_runs(mock_task)

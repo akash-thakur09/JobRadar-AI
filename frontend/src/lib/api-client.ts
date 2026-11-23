@@ -3,6 +3,25 @@ import type { ProblemDetails } from "@/types/api";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 const TIMEOUT_MS = Number(import.meta.env.VITE_REQUEST_TIMEOUT_MS) || 15000;
+const API_BASE_KEY = "jobradar.apiBasePath";
+
+export function isApiBasePath(path: string): boolean {
+  return /^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\/?$/i.test(path);
+}
+
+function browserApiBase(): string {
+  try {
+    const saved = window.localStorage.getItem(API_BASE_KEY);
+    return saved && isApiBasePath(saved) ? saved : BASE_URL;
+  } catch {
+    return BASE_URL;
+  }
+}
+
+export function saveBrowserApiBase(path: string) {
+  if (!isApiBasePath(path)) throw new Error("Enter a same-origin API path such as /api/v1.");
+  window.localStorage.setItem(API_BASE_KEY, path);
+}
 
 export class ApiError extends Error {
   public status: number;
@@ -31,7 +50,7 @@ export class ApiError extends Error {
  */
 function createApiClient(): AxiosInstance {
   const instance = axios.create({
-    baseURL: BASE_URL,
+    baseURL: browserApiBase(),
     timeout: TIMEOUT_MS,
     headers: {
       "Content-Type": "application/json",

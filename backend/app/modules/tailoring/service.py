@@ -68,6 +68,8 @@ class TailoringService:
         self,
         session: AsyncSession,
         request: TailorResumeRequest,
+        *,
+        enqueue: bool = False,
     ) -> TailoredResume:
         """Initiate or re-run resume tailoring for a qualified JobMatch.
 
@@ -150,6 +152,7 @@ class TailoringService:
             # Reset state for retry
             existing.generation_status = TailoredResumeStatusEnum.PENDING
             existing.validation_error = None
+            existing.completed_at = None
             existing.generation_attempts += 1
             record = await self.repository.save(session, existing)
         else:
@@ -164,19 +167,18 @@ class TailoringService:
                 generation_status=TailoredResumeStatusEnum.PENDING,
             )
 
-        # 5. Dispatch async Celery background task
-        try:
-            from app.modules.tailoring.tasks import generate_tailored_resume_task
+        if enqueue:
+            # The worker can start immediately and must see the committed request.
+            await session.commit()
+            try:
+                from app.modules.tailoring.tasks import generate_tailored_resume_task
 
-            generate_tailored_resume_task.apply_async(
-                args=[str(record.id)],
-                queue="tailoring",
-            )
-        except Exception as exc:
-            logger.warning(
-                f"Unable to dispatch Celery tailoring task for record {record.id}: {exc}. "
-                "Pipeline may be triggered synchronously or in worker."
-            )
+                generate_tailored_resume_task.apply_async(args=[str(record.id)], queue="tailoring")
+            except Exception:
+                logger.exception("Unable to enqueue tailoring record %s", record.id)
+                record.generation_status = TailoredResumeStatusEnum.FAILED
+                record.validation_error = "Tailoring could not be queued. Check the worker and broker."
+                await self.repository.save(session, record)
 
         return record
 

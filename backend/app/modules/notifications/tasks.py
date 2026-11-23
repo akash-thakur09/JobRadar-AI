@@ -1,6 +1,5 @@
 """Celery background tasks for asynchronous, reliable email notification delivery."""
 
-import asyncio
 import logging
 import random
 import uuid
@@ -16,6 +15,7 @@ from app.modules.notifications.email.exceptions import (
 )
 from app.modules.notifications.enums import NotificationDeliveryStatusEnum
 from app.modules.notifications.service import get_notification_service
+from app.workers.async_tasks import run_async_task
 from app.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 )
 def send_email_notification_task(self: Task, notification_id: str) -> dict[str, Any]:
     """Execute asynchronous email transmission for a target NotificationDelivery record."""
-    return asyncio.run(_async_send_email_notification(self, notification_id))
+    return run_async_task(_async_send_email_notification(self, notification_id))
 
 
 async def _async_send_email_notification(task: Task, notification_id_str: str) -> dict[str, Any]:
